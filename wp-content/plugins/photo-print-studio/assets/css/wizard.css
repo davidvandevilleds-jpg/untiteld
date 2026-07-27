@@ -1,0 +1,398 @@
+/**
+ * Photo Print Studio -- wizard styling.
+ *
+ * Design language: quiet, gallery-like presentation (generous whitespace,
+ * thin hairline borders, restrained uppercase labels, no heavy chrome)
+ * matching the tone of a fine-art print gallery site. All colours and
+ * fonts are exposed as CSS custom properties on .pps-wizard so a theme
+ * can override them in one place to match brand fonts/colours exactly --
+ * see the block below.
+ */
+
+.pps-wizard {
+	--pps-color-bg: #ffffff;
+	--pps-color-bg-alt: #f5f4f2;
+	--pps-color-fg: #111111;
+	--pps-color-muted: #6b6b6b;
+	--pps-color-border: #dcdad6;
+	--pps-color-accent: #111111;
+	--pps-color-accent-contrast: #ffffff;
+	--pps-color-warning-bg: #fbf3e6;
+	--pps-color-warning-fg: #7a5b13;
+	--pps-color-error: #a3231f;
+	--pps-font-heading: Georgia, 'Times New Roman', serif;
+	--pps-font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+	--pps-radius: 0px;
+	--pps-max-width: 1040px;
+	--pps-transition: 180ms ease;
+
+	max-width: var(--pps-max-width);
+	margin: 0 auto;
+	padding: 2.5rem 1.25rem 4rem;
+	color: var(--pps-color-fg);
+	font-family: var(--pps-font-body);
+	background: var(--pps-color-bg);
+	box-sizing: border-box;
+}
+
+.pps-wizard *,
+.pps-wizard *::before,
+.pps-wizard *::after {
+	box-sizing: inherit;
+}
+
+.pps-wizard h1,
+.pps-wizard h2,
+.pps-wizard h3 {
+	font-family: var(--pps-font-heading);
+	font-weight: 400;
+	letter-spacing: 0.01em;
+	margin: 0 0 0.5em;
+}
+
+.pps-wizard h2 {
+	font-size: 1.5rem;
+}
+
+.pps-wizard p {
+	line-height: 1.6;
+	color: var(--pps-color-muted);
+}
+
+/* ---------- Progress steps ---------- */
+
+.pps-steps {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 0;
+	list-style: none;
+	margin: 0 0 3rem;
+	padding: 0;
+	border-bottom: 1px solid var(--pps-color-border);
+	padding-bottom: 1.25rem;
+}
+
+.pps-steps li {
+	flex: 1 1 auto;
+	text-align: center;
+	font-size: 0.72rem;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--pps-color-muted);
+	position: relative;
+	padding: 0 0.25rem;
+}
+
+.pps-steps li::before {
+	content: attr(data-step-number);
+	display: block;
+	width: 1.75rem;
+	height: 1.75rem;
+	line-height: 1.75rem;
+	border-radius: 50%;
+	border: 1px solid var(--pps-color-border);
+	margin: 0 auto 0.5rem;
+	font-family: var(--pps-font-heading);
+}
+
+.pps-steps li.is-active {
+	color: var(--pps-color-fg);
+}
+
+.pps-steps li.is-active::before {
+	border-color: var(--pps-color-accent);
+	background: var(--pps-color-accent);
+	color: var(--pps-color-accent-contrast);
+}
+
+.pps-steps li.is-done::before {
+	content: '✓';
+	border-color: var(--pps-color-accent);
+	color: var(--pps-color-accent);
+}
+
+/* ---------- Panels / steps ---------- */
+
+.pps-panel {
+	display: none;
+	animation: pps-fade-in var(--pps-transition);
+}
+
+.pps-panel.is-active {
+	display: block;
+}
+
+@keyframes pps-fade-in {
+	from { opacity: 0; transform: translateY(6px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Upload dropzone ---------- */
+
+.pps-dropzone {
+	border: 1px dashed var(--pps-color-border);
+	padding: 4rem 1.5rem;
+	text-align: center;
+	cursor: pointer;
+	transition: border-color var(--pps-transition), background var(--pps-transition);
+}
+
+.pps-dropzone:hover,
+.pps-dropzone.is-dragover {
+	border-color: var(--pps-color-accent);
+	background: var(--pps-color-bg-alt);
+}
+
+.pps-dropzone__icon {
+	font-size: 2rem;
+	margin-bottom: 1rem;
+	opacity: 0.6;
+}
+
+.pps-dropzone input[type="file"] {
+	display: none;
+}
+
+.pps-upload-progress {
+	margin-top: 1.5rem;
+	font-size: 0.85rem;
+	color: var(--pps-color-muted);
+	text-align: center;
+}
+
+/* ---------- Cards / option grids ---------- */
+
+.pps-option-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+	gap: 1rem;
+	margin: 1.5rem 0 2rem;
+}
+
+.pps-option-card {
+	border: 1px solid var(--pps-color-border);
+	padding: 1rem;
+	cursor: pointer;
+	text-align: left;
+	background: var(--pps-color-bg);
+	transition: border-color var(--pps-transition), box-shadow var(--pps-transition);
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.pps-option-card:hover {
+	border-color: var(--pps-color-fg);
+}
+
+.pps-option-card.is-selected {
+	border-color: var(--pps-color-accent);
+	box-shadow: 0 0 0 1px var(--pps-color-accent);
+}
+
+.pps-option-card__image {
+	width: 100%;
+	height: 110px;
+	object-fit: cover;
+	background: var(--pps-color-bg-alt);
+	margin-bottom: 0.5rem;
+}
+
+.pps-option-card__name {
+	font-weight: 600;
+	font-size: 0.95rem;
+}
+
+.pps-option-card__meta {
+	font-size: 0.8rem;
+	color: var(--pps-color-muted);
+}
+
+.pps-option-card__price {
+	font-size: 0.85rem;
+	margin-top: auto;
+	padding-top: 0.35rem;
+}
+
+/* ---------- Custom size form ---------- */
+
+.pps-custom-size {
+	border: 1px solid var(--pps-color-border);
+	padding: 1.25rem;
+	margin-bottom: 1.5rem;
+}
+
+.pps-custom-size__row {
+	display: flex;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.pps-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	font-size: 0.8rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--pps-color-muted);
+}
+
+.pps-field input {
+	font-family: var(--pps-font-body);
+	font-size: 1rem;
+	padding: 0.6rem 0.75rem;
+	border: 1px solid var(--pps-color-border);
+	background: var(--pps-color-bg);
+	color: var(--pps-color-fg);
+	text-transform: none;
+	letter-spacing: normal;
+	width: 140px;
+}
+
+.pps-field input:focus {
+	outline: none;
+	border-color: var(--pps-color-accent);
+}
+
+/* ---------- Warnings ---------- */
+
+.pps-warning {
+	background: var(--pps-color-warning-bg);
+	color: var(--pps-color-warning-fg);
+	border: 1px solid var(--pps-color-warning-fg);
+	padding: 1rem 1.25rem;
+	margin: 1.25rem 0;
+	font-size: 0.9rem;
+}
+
+.pps-error {
+	color: var(--pps-color-error);
+	font-size: 0.9rem;
+	margin: 0.75rem 0;
+}
+
+/* ---------- Crop tool ---------- */
+
+.pps-crop {
+	position: relative;
+	width: 100%;
+	max-width: 560px;
+	margin: 1.5rem auto;
+	overflow: hidden;
+	background: #000;
+	touch-action: none;
+	cursor: grab;
+}
+
+.pps-crop:active {
+	cursor: grabbing;
+}
+
+.pps-crop canvas {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.pps-crop-controls {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 1rem;
+	margin: 1rem 0;
+}
+
+.pps-crop-controls input[type="range"] {
+	width: 220px;
+}
+
+/* ---------- Buttons ---------- */
+
+.pps-btn {
+	font-family: var(--pps-font-body);
+	font-size: 0.85rem;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	padding: 0.85rem 1.75rem;
+	border: 1px solid var(--pps-color-accent);
+	background: var(--pps-color-accent);
+	color: var(--pps-color-accent-contrast);
+	cursor: pointer;
+	transition: opacity var(--pps-transition);
+}
+
+.pps-btn:hover {
+	opacity: 0.85;
+}
+
+.pps-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.pps-btn--secondary {
+	background: transparent;
+	color: var(--pps-color-fg);
+}
+
+.pps-actions {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 2rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--pps-color-border);
+}
+
+/* ---------- Summary step ---------- */
+
+.pps-summary {
+	border: 1px solid var(--pps-color-border);
+	padding: 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.pps-summary__row {
+	display: flex;
+	justify-content: space-between;
+	padding: 0.5rem 0;
+	border-bottom: 1px solid var(--pps-color-border);
+	font-size: 0.9rem;
+}
+
+.pps-summary__row:last-child {
+	border-bottom: none;
+}
+
+.pps-summary__row--total {
+	font-size: 1.15rem;
+	font-weight: 600;
+	padding-top: 1rem;
+	margin-top: 0.5rem;
+	border-top: 1px solid var(--pps-color-fg);
+}
+
+.pps-preview-thumb {
+	max-width: 220px;
+	max-height: 220px;
+	border: 1px solid var(--pps-color-border);
+	object-fit: contain;
+	margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+	.pps-steps li {
+		font-size: 0.6rem;
+	}
+
+	.pps-actions {
+		flex-direction: column-reverse;
+		gap: 1rem;
+		align-items: stretch;
+	}
+
+	.pps-actions .pps-btn {
+		width: 100%;
+	}
+}

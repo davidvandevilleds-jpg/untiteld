@@ -1,0 +1,208 @@
+<?php
+/**
+ * WooCommerce integration: a single hidden "template" product represents
+ * every custom print in the cart. Each cart item carries its own computed
+ * price and selection data (format, paper, mount, finish, source photo),
+ * which we display in cart/checkout/order screens and persist as order
+ * item meta for fulfilment.
+ *
+ * @package PhotoPrintStudio
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+class PPS_WooCommerce {
+
+	const PRODUCT_ID_OPTION = 'pps_template_product_id';
+	const CART_ITEM_KEY     = 'pps_data';
+
+	/**
+	 * @var PPS_WooCommerce|null
+	 */
+	private static $instance = null;
+
+	/**
+	 * @return PPS_WooCommerce
+	 */
+	public static function instance() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	private function __construct() {
+		add_filter( 'woocommerce_get_item_data', array( __CLASS__, 'display_cart_item_data' ), 10, 2 );
+		add_action( 'woocommerce_before_calculate_totals', array( __CLASS__, 'apply_cart_item_price' ) );
+		add_action( 'woocommerce_checkout_create_order_line_item', array( __CLASS__, 'persist_order_item_meta' ), 10, 4 );
+		add_action( 'woocommerce_after_order_itemmeta', array( __CLASS__, 'render_admin_photo_link' ), 10, 3 );
+	}
+
+	/**
+	 * @return int|WP_Error Product ID of the (auto-created) template product.
+	 */
+	public static function get_template_product_id() {
+		$product_id = (int) get_option( self::PRODUCT_ID_OPTION );
+
+		if ( $product_id && 'product' === get_post_type( $product_id ) ) {
+			return $product_id;
+		}
+
+		return PPS_Install::create_template_product();
+	}
+
+	/**
+	 * Adds a configured print to the WooCommerce cart.
+	 *
+	 * @param array $cart_item_data Must contain a 'pps_data' array and a
+	 *                              unique 'unique_key' so identical-looking
+	 *                              prints don't merge into one line.
+	 * @param float $price          Computed total price for this print.
+	 * @return string|WP_Error Cart item key on success.
+	 */
+	public static function add_to_cart( $cart_item_data, $price ) {
+		$product_id = self::get_template_product_id();
+		if ( is_wp_error( $product_id ) ) {
+			return $product_id;
+		}
+
+		$cart_item_data[ self::CART_ITEM_KEY ]['total'] = $price;
+
+		// A REST API request doesn't always go through WooCommerce's normal
+		// frontend bootstrap, so the cart/session may not exist yet -- this
+		// is WooCommerce's own documented way of forcing it to load.
+		if ( function_exists( 'wc_load_cart' ) ) {
+			wc_load_cart();
+		}
+
+		$cart_item_key = WC()->cart->add_to_cart( $product_id, 1, 0, array(), $cart_item_data );
+
+		if ( ! $cart_item_key ) {
+			return new WP_Error( 'pps_cart_error', __( 'Kon dit product niet aan de winkelmand toevoegen.', 'photo-print-studio' ) );
+		}
+
+		return $cart_item_key;
+	}
+
+	/**
+	 * Overrides the template product's price with the per-item computed
+	 * price for every custom-print cart line.
+	 *
+	 * @param WC_Cart $cart
+	 */
+	public static function apply_cart_item_price( $cart ) {
+		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+			return;
+		}
+
+		foreach ( $cart->get_cart() as $cart_item ) {
+			if ( ! empty( $cart_item[ self::CART_ITEM_KEY ]['total'] ) ) {
+				$cart_item['data']->set_price( floatval( $cart_item[ self::CART_ITEM_KEY ]['total'] ) );
+			}
+		}
+	}
+
+	/**
+	 * Shows the selection summary under the product name in cart/checkout.
+	 *
+	 * @param array $item_data
+	 * @param array $cart_item
+	 * @return array
+	 */
+	public static function display_cart_item_data( $item_data, $cart_item ) {
+		if ( empty( $cart_item[ self::CART_ITEM_KEY ] ) ) {
+			return $item_data;
+		}
+
+		foreach ( self::summary_fields( $cart_item[ self::CART_ITEM_KEY ] ) as $label => $value ) {
+			$item_data[] = array(
+				'name'  => $label,
+				'value' => $value,
+			);
+		}
+
+		return $item_data;
+	}
+
+	/**
+	 * @param array $data The pps_data payload (from pricing calculation).
+	 * @return array Label => value pairs for customer-facing display.
+	 */
+	private static function summary_fields( $data ) {
+		$fields = array(
+			__( 'Formaat', 'photo-print-studio' )   => sprintf( '%s (%s x %s cm)', $data['format_name'], $data['width_cm'], $data['height_cm'] ),
+			__( 'Papier', 'photo-print-studio' )    => $data['paper_name'],
+			__( 'Montage', 'photo-print-studio' )   => $data['mount_name'],
+		);
+
+		if ( ! empty( $data['finish_name'] ) ) {
+			$fields[ __( 'Afwerking', 'photo-print-studio' ) ] = $data['finish_name'];
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * Persists the full selection onto the order line item so shop staff
+	 * can see everything (and re-derive pricing) after checkout.
+	 *
+	 * @param WC_Order_Item_Product $item
+	 * @param string                $cart_item_key
+	 * @param array                 $values
+	 * @param WC_Order              $order
+	 */
+	public static function persist_order_item_meta( $item, $cart_item_key, $values, $order ) {
+		if ( empty( $values[ self::CART_ITEM_KEY ] ) ) {
+			return;
+		}
+
+		$data = $values[ self::CART_ITEM_KEY ];
+
+		foreach ( self::summary_fields( $data ) as $label => $value ) {
+			$item->add_meta_data( $label, $value, true );
+		}
+
+		$item->add_meta_data( '_pps_attachment_id', $data['attachment_id'], true );
+		$item->add_meta_data( '_pps_crop', wp_json_encode( isset( $data['crop'] ) ? $data['crop'] : array() ), true );
+		$item->add_meta_data( '_pps_breakdown', wp_json_encode( $data ), true );
+	}
+
+	/**
+	 * In wp-admin's order edit screen, adds a direct download link to the
+	 * customer's original uploaded photo plus the crop info, right under
+	 * that line item's meta table.
+	 *
+	 * @param int                    $item_id
+	 * @param WC_Order_Item_Product  $item
+	 * @param WC_Product|false       $product
+	 */
+	public static function render_admin_photo_link( $item_id, $item, $product ) {
+		if ( ! is_admin() || ! ( $item instanceof WC_Order_Item_Product ) ) {
+			return;
+		}
+
+		$attachment_id = $item->get_meta( '_pps_attachment_id', true );
+		if ( ! $attachment_id ) {
+			return;
+		}
+
+		$url = wp_get_attachment_url( $attachment_id );
+		if ( ! $url ) {
+			return;
+		}
+
+		printf(
+			'<p class="pps-admin-photo-link"><strong>%s</strong> <a href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
+			esc_html__( 'Originele foto:', 'photo-print-studio' ),
+			esc_url( $url ),
+			esc_html__( 'Downloaden', 'photo-print-studio' )
+		);
+
+		$crop = $item->get_meta( '_pps_crop', true );
+		if ( $crop && '[]' !== $crop ) {
+			printf( '<p class="pps-admin-crop"><strong>%s</strong> <code>%s</code></p>', esc_html__( 'Crop:', 'photo-print-studio' ), esc_html( $crop ) );
+		}
+	}
+}

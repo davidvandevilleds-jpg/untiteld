@@ -28,7 +28,9 @@
 		heightCm: 0,
 		useCustomSize: false,
 		dpiInfo: null,
-		crop: null, // { sx, sy, sw, sh } in source pixels
+		showCropTool: false,
+		crop: null, // { sx, sy, sw, sh, rotation } in rotated-source pixels
+		rotation: 0, // 0, 90, 180 or 270 -- degrees the photo is rotated before cropping
 		zoom: 1,
 		mountId: 0,
 		paperId: 0,
@@ -396,8 +398,7 @@
 				state.formatId = format.id;
 				state.widthCm = format.width_cm;
 				state.heightCm = format.height_cm;
-				state.crop = null;
-				state.dpiInfo = null;
+				resetCropState();
 				render();
 				runDpiCheck();
 			} );
@@ -413,8 +414,7 @@
 		customCard.addEventListener( 'click', function () {
 			state.useCustomSize = true;
 			state.formatId = 0;
-			state.crop = null;
-			state.dpiInfo = null;
+			resetCropState();
 			render();
 		} );
 		grid.appendChild( customCard );
@@ -425,11 +425,11 @@
 			wrap.appendChild( renderCustomSizeForm() );
 		}
 
-		if ( state.dpiInfo && ( state.dpiInfo.below_threshold || state.dpiInfo.needs_crop ) ) {
+		if ( state.showCropTool ) {
 			wrap.appendChild( renderCropSection() );
 		}
 
-		var canContinue = state.widthCm > 0 && state.heightCm > 0 && ( ! state.dpiInfo || ! ( state.dpiInfo.below_threshold || state.dpiInfo.needs_crop ) || state.crop );
+		var canContinue = state.widthCm > 0 && state.heightCm > 0 && ( ! state.showCropTool || state.crop );
 
 		wrap.appendChild(
 			actionsBar( {
@@ -437,7 +437,16 @@
 				nextDisabled: ! canContinue,
 				onNext: function () {
 					if ( ! state.crop ) {
-						setDefaultCrop();
+						// The crop tool never ran for this selection (photo
+						// already matches the target ratio/DPI) -- record a
+						// plain, unrotated full-image crop for production.
+						state.crop = {
+							sw: state.imgWidth,
+							sh: state.imgHeight,
+							sx: 0,
+							sy: 0,
+							rotation: 0,
+						};
 					}
 					nextStep();
 				},
@@ -533,8 +542,7 @@
 		applyBtn.className = 'pps-btn pps-btn--secondary';
 		applyBtn.textContent = t( 'continue' );
 		applyBtn.addEventListener( 'click', function () {
-			state.crop = null;
-			state.dpiInfo = null;
+			resetCropState();
 			render();
 			runDpiCheck();
 		} );
@@ -581,6 +589,7 @@
 		} )
 			.then( function ( data ) {
 				state.dpiInfo = data;
+				state.showCropTool = data.below_threshold || data.needs_crop;
 				state.zoom = 1;
 				render();
 			} )
@@ -590,9 +599,22 @@
 			} );
 	}
 
+	/**
+	 * Clears everything derived from the previous format/size choice so a
+	 * new selection starts from a clean slate.
+	 */
+	function resetCropState() {
+		state.crop = null;
+		state.dpiInfo = null;
+		state.showCropTool = false;
+		state.rotation = 0;
+		rotatedForAngle = null;
+	}
+
 	/* ---- crop tool ---- */
 
-	var cropCanvas, cropCtx, cropImage, cropDrag;
+	var cropCanvas, cropCtx, cropDrag;
+	var originalImage, rotatedSource, rotatedWidth, rotatedHeight, rotatedForAngle;
 
 	function renderCropSection() {
 		var section = document.createElement( 'div' );
@@ -634,9 +656,23 @@
 			drawCrop();
 		} );
 		controls.appendChild( zoomInput );
+
+		var rotateBtn = document.createElement( 'button' );
+		rotateBtn.type = 'button';
+		rotateBtn.className = 'pps-btn pps-btn--secondary pps-rotate-btn';
+		rotateBtn.textContent = t( 'rotate' );
+		rotateBtn.addEventListener( 'click', function () {
+			state.rotation = ( state.rotation + 90 ) % 360;
+			rebuildRotatedSource();
+			setDefaultCrop();
+			updateDpiInfoForRotation();
+			render();
+		} );
+		controls.appendChild( rotateBtn );
+
 		section.appendChild( controls );
 
-		loadCropImage( function () {
+		ensureRotatedSource( function () {
 			var isFirstInit = ! state.crop;
 			if ( isFirstInit ) {
 				setDefaultCrop();
@@ -663,26 +699,114 @@
 		return { w: Math.round( w ), h: Math.round( h ) };
 	}
 
-	function loadCropImage( cb ) {
-		if ( cropImage && cropImage.src === state.imgUrl ) {
+	/**
+	 * Loads the untouched uploaded photo once per image URL.
+	 *
+	 * @param {Function} cb
+	 */
+	function loadOriginalImage( cb ) {
+		if ( originalImage && originalImage.src === state.imgUrl ) {
 			cb();
 			return;
 		}
-		cropImage = new Image();
-		cropImage.crossOrigin = 'anonymous';
-		cropImage.onload = cb;
-		cropImage.src = state.imgUrl;
+		originalImage = new Image();
+		originalImage.crossOrigin = 'anonymous';
+		originalImage.onload = cb;
+		originalImage.src = state.imgUrl;
+	}
+
+	/**
+	 * Ensures the crop tool has a same-orientation-as-selected-rotation
+	 * source to draw from: an offscreen canvas with the photo rotated by
+	 * state.rotation degrees (0 = the plain image, no extra canvas needed).
+	 * Cached per rotation angle so dragging/zooming never re-does this.
+	 *
+	 * @param {Function} cb Called once the rotated source is ready.
+	 */
+	function ensureRotatedSource( cb ) {
+		loadOriginalImage( function () {
+			rebuildRotatedSource();
+			cb();
+		} );
+	}
+
+	/**
+	 * Synchronously (re)builds the rotated source for the current
+	 * state.rotation. Assumes the original image is already loaded, which
+	 * is always true once the crop tool is visible.
+	 */
+	function rebuildRotatedSource() {
+		if ( rotatedForAngle === state.rotation && rotatedSource ) {
+			return;
+		}
+
+		if ( 0 === state.rotation ) {
+			rotatedSource = originalImage;
+			rotatedWidth = state.imgWidth;
+			rotatedHeight = state.imgHeight;
+			rotatedForAngle = 0;
+			return;
+		}
+
+		var swapped = 90 === state.rotation || 270 === state.rotation;
+		var canvas = document.createElement( 'canvas' );
+		canvas.width = swapped ? state.imgHeight : state.imgWidth;
+		canvas.height = swapped ? state.imgWidth : state.imgHeight;
+
+		var ctx = canvas.getContext( '2d' );
+		ctx.save();
+		ctx.translate( canvas.width / 2, canvas.height / 2 );
+		ctx.rotate( ( state.rotation * Math.PI ) / 180 );
+		ctx.drawImage( originalImage, -state.imgWidth / 2, -state.imgHeight / 2 );
+		ctx.restore();
+
+		rotatedSource = canvas;
+		rotatedWidth = canvas.width;
+		rotatedHeight = canvas.height;
+		rotatedForAngle = state.rotation;
+	}
+
+	/**
+	 * Re-derives dpi/needs-crop info for the current rotation, purely
+	 * client-side (same formula as PPS_Pricing::effective_dpi), so the
+	 * quality warning stays accurate after the customer rotates the photo.
+	 */
+	function updateDpiInfoForRotation() {
+		if ( ! state.dpiInfo ) {
+			return;
+		}
+		var dpiW = effectiveDpi( rotatedWidth, state.widthCm );
+		var dpiH = effectiveDpi( rotatedHeight, state.heightCm );
+		var dpi = Math.min( dpiW, dpiH );
+		var sourceRatio = rotatedWidth / rotatedHeight;
+		var targetRatio = state.widthCm / state.heightCm;
+
+		state.dpiInfo = {
+			dpi: Math.round( dpi * 10 ) / 10,
+			threshold: state.dpiInfo.threshold,
+			below_threshold: dpi < state.dpiInfo.threshold,
+			needs_crop: Math.round( sourceRatio * 1000 ) !== Math.round( targetRatio * 1000 ),
+			source_width: rotatedWidth,
+			source_height: rotatedHeight,
+		};
+	}
+
+	function effectiveDpi( px, cm ) {
+		if ( cm <= 0 ) {
+			return 0;
+		}
+		return px / ( cm / 2.54 );
 	}
 
 	function baseCropSize() {
 		var targetRatio = state.widthCm / state.heightCm;
-		var imgRatio = state.imgWidth / state.imgHeight;
+		var imgRatio = rotatedWidth / rotatedHeight;
 		var sw, sh;
 		if ( imgRatio > targetRatio ) {
-			sh = state.imgHeight;
+			sh = rotatedHeight;
 			sw = sh * targetRatio;
 		} else {
-			sw = state.imgWidth;
+			sw = rotatedWidth;
 			sh = sw / targetRatio;
 		}
 		return { sw: sw, sh: sh };
@@ -694,8 +818,9 @@
 		state.crop = {
 			sw: base.sw,
 			sh: base.sh,
-			sx: ( state.imgWidth - base.sw ) / 2,
-			sy: ( state.imgHeight - base.sh ) / 2,
+			sx: ( rotatedWidth - base.sw ) / 2,
+			sy: ( rotatedHeight - base.sh ) / 2,
+			rotation: state.rotation,
 		};
 	}
 
@@ -709,10 +834,10 @@
 		var cx = state.crop.sx + state.crop.sw / 2;
 		var cy = state.crop.sy + state.crop.sh / 2;
 
-		var sx = clamp( cx - sw / 2, 0, state.imgWidth - sw );
-		var sy = clamp( cy - sh / 2, 0, state.imgHeight - sh );
+		var sx = clamp( cx - sw / 2, 0, rotatedWidth - sw );
+		var sy = clamp( cy - sh / 2, 0, rotatedHeight - sh );
 
-		state.crop = { sw: sw, sh: sh, sx: sx, sy: sy };
+		state.crop = { sw: sw, sh: sh, sx: sx, sy: sy, rotation: state.rotation };
 	}
 
 	function clamp( value, min, max ) {
@@ -728,7 +853,7 @@
 		}
 		cropCtx.clearRect( 0, 0, cropCanvas.width, cropCanvas.height );
 		cropCtx.drawImage(
-			cropImage,
+			rotatedSource,
 			state.crop.sx,
 			state.crop.sy,
 			state.crop.sw,
@@ -757,8 +882,8 @@
 			var dx = ( e.clientX - cropDrag.x ) * factor;
 			var dy = ( e.clientY - cropDrag.y ) * factor;
 
-			state.crop.sx = clamp( cropDrag.sx - dx, 0, state.imgWidth - state.crop.sw );
-			state.crop.sy = clamp( cropDrag.sy - dy, 0, state.imgHeight - state.crop.sh );
+			state.crop.sx = clamp( cropDrag.sx - dx, 0, rotatedWidth - state.crop.sw );
+			state.crop.sy = clamp( cropDrag.sy - dy, 0, rotatedHeight - state.crop.sh );
 			drawCrop();
 		} );
 

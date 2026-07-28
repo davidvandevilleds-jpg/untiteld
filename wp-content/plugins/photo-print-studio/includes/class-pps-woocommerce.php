@@ -202,9 +202,32 @@ class PPS_WooCommerce {
 			esc_html__( 'Downloaden', 'photo-print-studio' )
 		);
 
-		$crop = $item->get_meta( '_pps_crop', true );
-		if ( $crop && '[]' !== $crop ) {
-			printf( '<p class="pps-admin-crop"><strong>%s</strong> <code>%s</code></p>', esc_html__( 'Crop:', 'photo-print-studio' ), esc_html( $crop ) );
+		$crop = json_decode( (string) $item->get_meta( '_pps_crop', true ), true );
+		if ( empty( $crop ) || empty( $crop['sw'] ) ) {
+			return;
+		}
+
+		$rotation = ! empty( $crop['rotation'] ) ? (int) $crop['rotation'] : 0;
+
+		printf(
+			'<p class="pps-admin-crop"><strong>%s</strong> %s: %d, %s: %d, %s: %d × %d px</p>',
+			esc_html__( 'Uitsnede:', 'photo-print-studio' ),
+			esc_html__( 'x', 'photo-print-studio' ),
+			round( $crop['sx'] ),
+			esc_html__( 'y', 'photo-print-studio' ),
+			round( $crop['sy'] ),
+			esc_html__( 'grootte', 'photo-print-studio' ),
+			round( $crop['sw'] ),
+			round( $crop['sh'] )
+		);
+
+		if ( $rotation ) {
+			printf(
+				'<p class="pps-admin-crop"><strong>%s</strong> %d° (%s)</p>',
+				esc_html__( 'Rotatie:', 'photo-print-studio' ),
+				$rotation,
+				esc_html__( 'toepassen vóór uitsnede', 'photo-print-studio' )
+			);
 		}
 	}
 

@@ -307,6 +307,11 @@
 	width: 220px;
 }
 
+.pps-rotate-btn {
+	padding: 0.55rem 1rem;
+	white-space: nowrap;
+}
+
 /* ---------- Buttons ---------- */
 
 .pps-btn {

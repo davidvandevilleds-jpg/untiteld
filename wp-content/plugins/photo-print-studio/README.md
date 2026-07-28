@@ -1,9 +1,11 @@
 # Photo Print Studio
 
 WordPress-plugin met een stapsgewijze bestelwizard voor foto's op maat laten
-printen: uploaden, formaat/DPI-controle met crop-voorbeeld, papierkeuze
-(Hahnemühle Digital FineArt Collection), montage op Dibond met afwerkingen,
-en afronden via WooCommerce.
+printen: uploaden, formaat/DPI-controle, een standaardformaat of een zelf
+ingegeven aangepast formaat kiezen, indien nodig bijsnijden en 90° draaien
+in een interactieve crop-tool, papierkeuze (Hahnemühle Digital FineArt
+Collection), montage op Dibond met afwerkingen, en afronden via
+WooCommerce.
 
 ## Installatie
 
@@ -24,7 +26,7 @@ nodig:
 
 | Onderdeel | Menu | Belangrijkste velden |
 |---|---|---|
-| Formaten | Print Studio → Formaten | Breedte/hoogte (cm), optionele vaste toeslag |
+| Formaten | Print Studio → Formaten | Breedte/hoogte (cm), optionele vaste toeslag (naast de standaardformaten kan de klant in de wizard ook zelf een aangepast formaat ingeven) |
 | Papieren | Print Studio → Papieren (Hahnemühle) | Prijs per m² |
 | Montages | Print Studio → Montage-opties | Prijs per m², "Vraagt om een afwerkingskeuze" |
 | Afwerkingen | Print Studio → Afwerkingen (Dibond) | Prijs per m² en/of vaste prijs |
@@ -41,6 +43,23 @@ wizard toont hem automatisch.
 Globale instellingen (minimale DPI, maximale afmetingen voor een aangepast
 formaat, behandelingskost, e-mailadres voor bestelmeldingen) staan onder
 **Print Studio → Instellingen**.
+
+## Crop-tool
+
+Zodra de klant een formaat kiest (standaard of zelf ingegeven) waarvan de
+verhouding niet overeenkomt met de foto, of waarbij de effectieve
+resolutie onder de ingestelde minimale DPI zakt, verschijnt automatisch
+een waarschuwing en een interactieve uitsnede-tool:
+
+- **Verschuiven**: sleep de foto binnen het kader.
+- **Zoomen**: schuifregelaar om in/uit te zoomen op de uitsnede.
+- **90° draaien**: knop om de foto in stappen van 90° te roteren, handig
+  wanneer een liggende foto op een staand formaat (of omgekeerd) moet
+  passen.
+
+De uiteindelijke uitsnede (positie, grootte én rotatiehoek) wordt
+opgeslagen bij de bestelling en is zichtbaar op het bestellingsscherm in
+wp-admin, naast de downloadlink naar de originele foto.
 
 ## E-mails bij bestelling
 

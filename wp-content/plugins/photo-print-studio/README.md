@@ -39,7 +39,27 @@ gewoon een nieuwe "Montage-optie" toe met zijn eigen prijs per m² — de
 wizard toont hem automatisch.
 
 Globale instellingen (minimale DPI, maximale afmetingen voor een aangepast
-formaat, behandelingskost) staan onder **Print Studio → Instellingen**.
+formaat, behandelingskost, e-mailadres voor bestelmeldingen) staan onder
+**Print Studio → Instellingen**.
+
+## E-mails bij bestelling
+
+- **Wij (order@bunker.gallery, aanpasbaar onder Instellingen)** ontvangen
+  WooCommerce's "Nieuwe bestelling"-mail, aangevuld met de originele,
+  hoge-resolutie foto('s) als bijlage plus alle keuzes (formaat, papier,
+  montage, afwerking) in het overzicht. Bestanden groter dan 15 MB worden
+  niet bijgevoegd (mailservers wijzen grote bijlagen vaak af) — die foto
+  blijft wel altijd rechtstreeks downloadbaar via de bestelling in
+  wp-admin.
+- **De klant** ontvangt automatisch WooCommerce's eigen
+  bevestigingsmail (bv. "Bestelling in verwerking" / "Bestelling
+  voltooid") met hetzelfde overzicht van formaat, papier, montage en
+  afwerking.
+
+Dit gebruikt de bestaande WooCommerce e-mailinstellingen (WooCommerce →
+Instellingen → E-mails) voor afzender, huisstijl en het aan/uit zetten van
+losse mails — deze plugin voegt enkel de foto-bijlage en het gegarandeerde
+order@bunker.gallery-adres toe.
 
 ## Prijsberekening
 

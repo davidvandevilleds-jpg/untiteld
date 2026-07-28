@@ -41,12 +41,13 @@ class PPS_Settings {
 	 */
 	public static function defaults() {
 		return array(
-			'dpi_threshold'    => 200,
-			'max_width_cm'     => 110,
-			'max_height_cm'    => 1200,
-			'min_size_cm'      => 10,
-			'handling_fee'     => 0,
-			'custom_size_step' => 1,
+			'dpi_threshold'            => 200,
+			'max_width_cm'             => 110,
+			'max_height_cm'            => 1200,
+			'min_size_cm'              => 10,
+			'handling_fee'             => 0,
+			'custom_size_step'         => 1,
+			'order_notification_email' => 'order@bunker.gallery',
 		);
 	}
 
@@ -80,6 +81,12 @@ class PPS_Settings {
 		$clean    = array();
 
 		foreach ( $defaults as $key => $default ) {
+			if ( 'order_notification_email' === $key ) {
+				$email         = isset( $input[ $key ] ) ? sanitize_email( $input[ $key ] ) : '';
+				$clean[ $key ] = is_email( $email ) ? $email : $default;
+				continue;
+			}
+
 			$clean[ $key ] = isset( $input[ $key ] ) && is_numeric( $input[ $key ] )
 				? floatval( $input[ $key ] )
 				: $default;
@@ -144,6 +151,13 @@ class PPS_Settings {
 					<tr>
 						<th scope="row"><label for="pps_custom_size_step"><?php esc_html_e( 'Stapgrootte aangepast formaat (cm)', 'photo-print-studio' ); ?></label></th>
 						<td><input type="number" step="0.1" min="0.1" id="pps_custom_size_step" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[custom_size_step]" value="<?php echo esc_attr( $settings['custom_size_step'] ); ?>" class="small-text" /> cm</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="pps_order_notification_email"><?php esc_html_e( 'E-mailadres voor nieuwe bestellingen', 'photo-print-studio' ); ?></label></th>
+						<td>
+							<input type="email" id="pps_order_notification_email" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[order_notification_email]" value="<?php echo esc_attr( $settings['order_notification_email'] ); ?>" class="regular-text" />
+							<p class="description"><?php esc_html_e( 'Ontvangt bij elke nieuwe bestelling een e-mail met alle keuzes (formaat, papier, montage, afwerking) en de originele foto als bijlage.', 'photo-print-studio' ); ?></p>
+						</td>
 					</tr>
 				</table>
 				<?php submit_button( __( 'Instellingen opslaan', 'photo-print-studio' ) ); ?>

@@ -38,6 +38,8 @@ class PPS_WooCommerce {
 		add_action( 'woocommerce_before_calculate_totals', array( __CLASS__, 'apply_cart_item_price' ) );
 		add_action( 'woocommerce_checkout_create_order_line_item', array( __CLASS__, 'persist_order_item_meta' ), 10, 4 );
 		add_action( 'woocommerce_after_order_itemmeta', array( __CLASS__, 'render_admin_photo_link' ), 10, 3 );
+		add_filter( 'woocommerce_email_recipient_new_order', array( __CLASS__, 'ensure_order_notification_recipient' ), 10, 3 );
+		add_filter( 'woocommerce_email_attachments', array( __CLASS__, 'attach_order_photos' ), 10, 4 );
 	}
 
 	/**
@@ -204,5 +206,69 @@ class PPS_WooCommerce {
 		if ( $crop && '[]' !== $crop ) {
 			printf( '<p class="pps-admin-crop"><strong>%s</strong> <code>%s</code></p>', esc_html__( 'Crop:', 'photo-print-studio' ), esc_html( $crop ) );
 		}
+	}
+
+	/**
+	 * Makes sure the configured order-notification address (Print Studio ->
+	 * Instellingen, default order@bunker.gallery) always receives the "New
+	 * order" admin email, in addition to whatever WooCommerce's own email
+	 * settings already specify.
+	 *
+	 * @param string   $recipient
+	 * @param WC_Order $order
+	 * @return string
+	 */
+	public static function ensure_order_notification_recipient( $recipient, $order ) {
+		$configured = sanitize_email( (string) PPS_Settings::get_value( 'order_notification_email' ) );
+		if ( ! $configured || ! is_email( $configured ) ) {
+			return $recipient;
+		}
+
+		$recipients = array_filter( array_map( 'trim', explode( ',', (string) $recipient ) ) );
+		if ( ! in_array( $configured, $recipients, true ) ) {
+			$recipients[] = $configured;
+		}
+
+		return implode( ', ', $recipients );
+	}
+
+	/**
+	 * Attaches every ordered photo's original, full-resolution file to the
+	 * admin "New order" email, so the print shop has everything (info +
+	 * photo) in one place without needing to log into wp-admin first.
+	 *
+	 * Large files (beyond pps_max_email_attachment_bytes, 15 MB by default)
+	 * are skipped to avoid mail servers rejecting oversized messages -- the
+	 * order screen in wp-admin always has a direct download link regardless.
+	 *
+	 * @param string[] $attachments
+	 * @param string   $email_id
+	 * @param mixed    $object
+	 * @return string[]
+	 */
+	public static function attach_order_photos( $attachments, $email_id, $object ) {
+		if ( 'new_order' !== $email_id || ! ( $object instanceof WC_Order ) ) {
+			return $attachments;
+		}
+
+		$max_bytes = (int) apply_filters( 'pps_max_email_attachment_bytes', 15 * MB_IN_BYTES );
+
+		foreach ( $object->get_items() as $item ) {
+			if ( ! ( $item instanceof WC_Order_Item_Product ) ) {
+				continue;
+			}
+
+			$attachment_id = $item->get_meta( '_pps_attachment_id', true );
+			if ( ! $attachment_id ) {
+				continue;
+			}
+
+			$path = get_attached_file( $attachment_id );
+			if ( $path && file_exists( $path ) && filesize( $path ) <= $max_bytes ) {
+				$attachments[] = $path;
+			}
+		}
+
+		return $attachments;
 	}
 }

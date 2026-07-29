@@ -1312,6 +1312,9 @@
 
 		state.catalogue.finishes.forEach( function ( finish ) {
 			var priceParts = [];
+			if ( finish.price_per_lm ) {
+				priceParts.push( formatMoney( finish.price_per_lm ) + ' / lm' );
+			}
 			if ( finish.price_per_m2 ) {
 				priceParts.push( formatMoney( finish.price_per_m2 ) + ' / m²' );
 			}

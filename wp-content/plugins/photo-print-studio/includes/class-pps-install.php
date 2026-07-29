@@ -168,23 +168,30 @@ class PPS_Install {
 		);
 	}
 
+	/**
+	 * Frame mouldings and edge trims are bought and priced by running
+	 * length, not by area -- so their cost is (per_lm x perimeter) rather
+	 * than (per_m2 x oppervlakte). The plain hanging system has no visible
+	 * trim, so it stays a flat price instead.
+	 */
 	private static function seed_finishes() {
 		$finishes = array(
-			array( __( 'Onzichtbaar ophangsysteem', 'photo-print-studio' ), 0, 0 ),
-			array( __( 'Onzichtbaar ophangsysteem + randafwerking zilver', 'photo-print-studio' ), 0, 25 ),
-			array( __( 'Onzichtbaar ophangsysteem + randafwerking goud', 'photo-print-studio' ), 0, 25 ),
-			array( __( 'Onzichtbaar ophangsysteem + randafwerking koper', 'photo-print-studio' ), 0, 25 ),
-			array( __( 'Aluminium frame wenge light', 'photo-print-studio' ), 12, 40 ),
-			array( __( 'Aluminium frame wenge dark', 'photo-print-studio' ), 12, 40 ),
+			array( __( 'Onzichtbaar ophangsysteem', 'photo-print-studio' ), 0, 0, 0 ),
+			array( __( 'Onzichtbaar ophangsysteem + randafwerking zilver', 'photo-print-studio' ), 15, 0, 0 ),
+			array( __( 'Onzichtbaar ophangsysteem + randafwerking goud', 'photo-print-studio' ), 15, 0, 0 ),
+			array( __( 'Onzichtbaar ophangsysteem + randafwerking koper', 'photo-print-studio' ), 15, 0, 0 ),
+			array( __( 'Aluminium frame wenge light', 'photo-print-studio' ), 22, 0, 15 ),
+			array( __( 'Aluminium frame wenge dark', 'photo-print-studio' ), 22, 0, 15 ),
 		);
 
 		foreach ( $finishes as $index => $finish ) {
-			list( $title, $per_m2, $fixed ) = $finish;
+			list( $title, $per_lm, $per_m2, $fixed ) = $finish;
 			self::maybe_create(
 				PPS_CPT::FINISH,
 				$title,
 				'',
 				array(
+					'_pps_price_per_lm' => $per_lm,
 					'_pps_price_per_m2' => $per_m2,
 					'_pps_price_fixed'  => $fixed,
 				),

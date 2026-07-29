@@ -71,6 +71,18 @@ class PPS_Pricing {
 	}
 
 	/**
+	 * Perimeter (omtrek) in running/linear metres -- used to price frames
+	 * and edge trims, which are bought and cut by length rather than area.
+	 *
+	 * @param float $width_cm
+	 * @param float $height_cm
+	 * @return float Linear metres.
+	 */
+	public static function perimeter_m( $width_cm, $height_cm ) {
+		return 2 * ( floatval( $width_cm ) + floatval( $height_cm ) ) / 100;
+	}
+
+	/**
 	 * Effective print resolution in pixels-per-inch for the given image
 	 * pixel dimensions printed at the given physical size.
 	 *
@@ -133,15 +145,18 @@ class PPS_Pricing {
 			$args['finish_id'] = 0;
 		}
 
-		$area = self::area_m2( $args['width_cm'], $args['height_cm'] );
+		$area      = self::area_m2( $args['width_cm'], $args['height_cm'] );
+		$perimeter = self::perimeter_m( $args['width_cm'], $args['height_cm'] );
 
 		$paper_price_per_m2 = (float) get_post_meta( $args['paper_id'], '_pps_price_per_m2', true );
 		$mount_price_per_m2 = (float) get_post_meta( $args['mount_id'], '_pps_price_per_m2', true );
 		$format_surcharge   = $args['format_id'] ? (float) get_post_meta( $args['format_id'], '_pps_surcharge', true ) : 0;
 
+		$finish_price_per_lm = 0;
 		$finish_price_per_m2 = 0;
 		$finish_price_fixed  = 0;
 		if ( $args['finish_id'] ) {
+			$finish_price_per_lm = (float) get_post_meta( $args['finish_id'], '_pps_price_per_lm', true );
 			$finish_price_per_m2 = (float) get_post_meta( $args['finish_id'], '_pps_price_per_m2', true );
 			$finish_price_fixed  = (float) get_post_meta( $args['finish_id'], '_pps_price_fixed', true );
 		}
@@ -151,7 +166,7 @@ class PPS_Pricing {
 
 		$paper_cost  = round( $area * $paper_price_per_m2, 2 );
 		$mount_cost  = round( $area * $mount_price_per_m2, 2 );
-		$finish_cost = round( ( $area * $finish_price_per_m2 ) + $finish_price_fixed, 2 );
+		$finish_cost = round( ( $perimeter * $finish_price_per_lm ) + ( $area * $finish_price_per_m2 ) + $finish_price_fixed, 2 );
 
 		// This is the price for one print in this configuration. The
 		// handling fee is charged once per order (not per print / not
@@ -164,6 +179,7 @@ class PPS_Pricing {
 			'width_cm'             => floatval( $args['width_cm'] ),
 			'height_cm'            => floatval( $args['height_cm'] ),
 			'area_m2'              => round( $area, 4 ),
+			'perimeter_m'          => round( $perimeter, 4 ),
 			'paper_id'             => (int) $args['paper_id'],
 			'paper_name'           => get_the_title( $args['paper_id'] ),
 			'paper_cost'           => $paper_cost,

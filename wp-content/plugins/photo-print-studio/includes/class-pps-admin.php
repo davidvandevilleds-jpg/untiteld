@@ -131,6 +131,12 @@ class PPS_Admin {
 			PPS_CPT::FINISH => array(
 				'title'  => __( 'Afwerkingsgegevens', 'photo-print-studio' ),
 				'fields' => array(
+					'_pps_price_per_lm' => array(
+						'label'       => __( 'Prijs per lopende meter (€, optioneel)', 'photo-print-studio' ),
+						'type'        => 'number',
+						'step'        => '0.01',
+						'description' => __( 'Voor randafwerkingen en frames: de kost wordt berekend als de omtrek van het formaat (2 × (breedte + hoogte)) in lopende meter, maal dit bedrag.', 'photo-print-studio' ),
+					),
 					'_pps_price_per_m2' => array(
 						'label' => __( 'Prijs per m² (€, optioneel)', 'photo-print-studio' ),
 						'type'  => 'number',
@@ -257,10 +263,14 @@ class PPS_Admin {
 		if ( 'pps_price' !== $column ) {
 			return;
 		}
+		$per_lm = get_post_meta( $post_id, '_pps_price_per_lm', true );
 		$per_m2 = get_post_meta( $post_id, '_pps_price_per_m2', true );
 		$fixed  = get_post_meta( $post_id, '_pps_price_fixed', true );
 
 		$parts = array();
+		if ( $per_lm ) {
+			$parts[] = pps_format_price( $per_lm ) . ' / lm';
+		}
 		if ( $per_m2 ) {
 			$parts[] = pps_format_price( $per_m2 ) . ' / m²';
 		}
@@ -282,7 +292,11 @@ if ( ! function_exists( 'pps_format_price' ) ) {
 	 */
 	function pps_format_price( $amount ) {
 		if ( function_exists( 'wc_price' ) ) {
-			return wp_strip_all_tags( wc_price( $amount ) );
+			// wc_price() renders the currency symbol as an HTML entity
+			// (e.g. "&euro;"); decode it to the actual character so it
+			// doesn't show up as literal "&euro;" text once this string
+			// goes through esc_html() in the admin list columns.
+			return html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' );
 		}
 		return number_format( (float) $amount, 2 ) . ' €';
 	}

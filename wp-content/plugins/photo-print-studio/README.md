@@ -30,7 +30,7 @@ nodig:
 | Formaten | Print Studio → Formaten | Breedte/hoogte (cm), optionele vaste toeslag (naast de standaardformaten kan de klant in de wizard ook zelf een aangepast formaat ingeven) |
 | Papieren | Print Studio → Papieren (Hahnemühle) | Prijs per m² |
 | Montages | Print Studio → Montage-opties | Prijs per m², "Vraagt om een afwerkingskeuze" |
-| Afwerkingen | Print Studio → Afwerkingen (Dibond) | Prijs per m² en/of vaste prijs |
+| Afwerkingen | Print Studio → Afwerkingen (Dibond) | Prijs per lopende meter (lm), per m² en/of vaste prijs |
 
 Een nieuw item toevoegen werkt als een gewone WordPress-pagina: titel,
 eventueel een beschrijving en uitgelichte afbeelding (getoond in de
@@ -85,6 +85,15 @@ De uiteindelijke uitsnede (positie, grootte én rotatiehoek) wordt per foto
 opgeslagen bij de bestelling en is zichtbaar op het bestellingsscherm in
 wp-admin, naast de downloadlink naar de originele foto.
 
+## Fotominiatuur bij het product
+
+Omdat elke bestelling via één en hetzelfde ("verborgen") WooCommerce-product
+verloopt, toont de winkelmand/bestelpagina standaard geen productfoto. Deze
+plugin toont in de plaats daarvan een kleine miniatuur van de eigen
+geüploade foto van de klant — zichtbaar in het winkelmandje, bij het
+afrekenen (besteloverzicht), op de bevestigingspagina, in de
+bestelmails en onder Mijn account → Bestellingen.
+
 ## E-mails bij bestelling
 
 - **Wij (order@bunker.gallery, aanpasbaar onder Instellingen)** ontvangen
@@ -118,13 +127,23 @@ maximum bestandsgrootte (standaard 200 MB, aan te passen via het
 ## Prijsberekening
 
 ```
-prijs per stuk = (breedte_m × hoogte_m) × (papier €/m² + montage €/m²)
-                + afwerking (€/m² × oppervlakte + vaste prijs, indien van toepassing)
+omtrek (lm)  = 2 × (breedte_m + hoogte_m)
+oppervlakte  = breedte_m × hoogte_m
+
+prijs per stuk = oppervlakte × (papier €/m² + montage €/m²)
+                + afwerking (omtrek × €/lm + oppervlakte × €/m² + vaste prijs, elk optioneel)
                 + vaste toeslag van het gekozen formaat (optioneel)
 
 bestelling totaal = Σ (prijs per stuk × aantal exemplaren, per foto)
                    + vaste behandelingskost (instellingen, éénmalig per bestelling)
 ```
+
+De prijs per lopende meter (lm) is bedoeld voor afwerkingen die per lengte
+verkocht worden, zoals randafwerking (zilver/goud/koper) en aluminium
+frames: de kost is de omtrek van het gekozen formaat in lopende meter,
+maal de ingestelde lm-prijs. Bij activatie van de plugin zijn de
+"randafwerking"- en "aluminium frame"-afwerkingen al met een lm-prijs
+ingesteld; pas dit aan onder **Print Studio → Afwerkingen (Dibond)**.
 
 De behandelingskost wordt precies één keer per bestelling aangerekend (als
 WooCommerce-"kost" op het winkelmandje), ongeacht hoeveel foto's of

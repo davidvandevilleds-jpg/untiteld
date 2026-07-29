@@ -41,6 +41,8 @@ class PPS_WooCommerce {
 		add_action( 'woocommerce_after_order_itemmeta', array( __CLASS__, 'render_admin_photo_link' ), 10, 3 );
 		add_filter( 'woocommerce_email_recipient_new_order', array( __CLASS__, 'ensure_order_notification_recipient' ), 10, 3 );
 		add_filter( 'woocommerce_email_attachments', array( __CLASS__, 'attach_order_photos' ), 10, 4 );
+		add_filter( 'woocommerce_cart_item_thumbnail', array( __CLASS__, 'cart_item_thumbnail' ), 10, 2 );
+		add_filter( 'woocommerce_order_item_name', array( __CLASS__, 'order_item_name_thumbnail' ), 10, 2 );
 	}
 
 	/**
@@ -160,6 +162,64 @@ class PPS_WooCommerce {
 		}
 
 		return $item_data;
+	}
+
+	/**
+	 * Shows the customer's own uploaded photo as the cart/checkout/mini-cart
+	 * thumbnail instead of the hidden template product's (non-existent)
+	 * image, so they see what they're actually ordering.
+	 *
+	 * @param string $image
+	 * @param array  $cart_item
+	 * @return string
+	 */
+	public static function cart_item_thumbnail( $image, $cart_item ) {
+		if ( empty( $cart_item[ self::CART_ITEM_KEY ]['attachment_id'] ) ) {
+			return $image;
+		}
+
+		$thumb = self::photo_thumbnail_html( $cart_item[ self::CART_ITEM_KEY ]['attachment_id'] );
+
+		return $thumb ? $thumb : $image;
+	}
+
+	/**
+	 * Prepends the same photo thumbnail to the order line item's name on
+	 * the order-received page, My Account order view, and order emails.
+	 *
+	 * @param string                 $name
+	 * @param WC_Order_Item_Product  $item
+	 * @return string
+	 */
+	public static function order_item_name_thumbnail( $name, $item ) {
+		if ( ! ( $item instanceof WC_Order_Item_Product ) ) {
+			return $name;
+		}
+
+		$attachment_id = $item->get_meta( '_pps_attachment_id', true );
+		if ( ! $attachment_id ) {
+			return $name;
+		}
+
+		$thumb = self::photo_thumbnail_html( $attachment_id );
+
+		return $thumb ? $thumb . $name : $name;
+	}
+
+	/**
+	 * @param int $attachment_id
+	 * @return string Small <img> tag, or '' if the attachment has no image.
+	 */
+	private static function photo_thumbnail_html( $attachment_id ) {
+		return (string) wp_get_attachment_image(
+			$attachment_id,
+			'thumbnail',
+			false,
+			array(
+				'style' => 'display:block;max-width:64px;height:auto;margin:0 0 6px;',
+				'alt'   => '',
+			)
+		);
 	}
 
 	/**

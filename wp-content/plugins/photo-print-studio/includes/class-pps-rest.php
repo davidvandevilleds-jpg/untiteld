@@ -242,6 +242,7 @@ class PPS_Rest {
 					'id'            => $post->ID,
 					'name'          => get_the_title( $post ),
 					'description'   => wp_strip_all_tags( $post->post_content ),
+					'price_per_lm'  => (float) get_post_meta( $post->ID, '_pps_price_per_lm', true ),
 					'price_per_m2'  => (float) get_post_meta( $post->ID, '_pps_price_per_m2', true ),
 					'price_fixed'   => (float) get_post_meta( $post->ID, '_pps_price_fixed', true ),
 					'image'         => get_the_post_thumbnail_url( $post->ID, 'medium' ),
@@ -259,7 +260,13 @@ class PPS_Rest {
 				'mounts'   => $mounts,
 				'finishes' => $finishes,
 				'settings' => $settings,
-				'currency' => function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '€',
+				// get_woocommerce_currency_symbol() returns an HTML entity
+				// (e.g. "&euro;"); decode it since this value is inserted
+				// as plain text (element.textContent) in the wizard, which
+				// doesn't interpret HTML entities.
+				'currency' => function_exists( 'get_woocommerce_currency_symbol' )
+					? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
+					: '€',
 			)
 		);
 	}

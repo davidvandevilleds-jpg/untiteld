@@ -328,19 +328,56 @@ class PPS_Image {
 	}
 
 	/**
+	 * Loads an image file with the GD function matching its actual stored
+	 * mime type.
+	 *
+	 * @param string $path
+	 * @param string $mime_type
+	 * @return resource|GdImage|false
+	 */
+	private static function gd_load( $path, $mime_type ) {
+		switch ( $mime_type ) {
+			case 'image/jpeg':
+				return @imagecreatefromjpeg( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			case 'image/png':
+				return @imagecreatefrompng( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			case 'image/webp':
+				return function_exists( 'imagecreatefromwebp' ) ? @imagecreatefromwebp( $path ) : false; // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			default:
+				// Notably TIFF: GD has no decoder for it.
+				return false;
+		}
+	}
+
+	/**
 	 * Produces the actual print-ready file for one ordered photo: the
-	 * original, rotated and cropped exactly the way the customer set it up
-	 * in the wizard, saved as a new Media Library attachment. Used so the
-	 * shop and the "new order" email receive the file that should actually
-	 * be printed, not just the untouched original plus coordinates.
+	 * exact region the customer framed in the wizard, extracted from the
+	 * original (crop coordinates are always in the *original*, upright
+	 * photo's own pixel space -- the photo is never rotated for display),
+	 * then rotated 90 degrees if the customer chose to print that framing
+	 * sideways. Saved as a new Media Library attachment, so the shop and
+	 * the "new order" email receive the file that should actually be
+	 * printed, not just the untouched original plus coordinates.
+	 *
+	 * Deliberately uses GD directly rather than WP_Image_Editor: the GD vs.
+	 * Imagick backends WP might pick disagree on which rotation direction
+	 * "positive degrees" means, which previously produced a wrongly
+	 * rotated/cropped file. GD's exact rotation direction (imagerotate() is
+	 * counter-clockwise for positive angles, confirmed by test) is used
+	 * here directly to avoid that ambiguity.
 	 *
 	 * @param int   $original_attachment_id
-	 * @param array $crop { @type float $sx, $sy, $sw, $sh, $rotation }
+	 * @param array $crop { @type float $sx, $sy, $sw, $sh, $rotation } in
+	 *                     the original photo's own pixel space.
 	 * @return array|WP_Error { @type int $attachment_id, @type string $url }
 	 */
 	public static function generate_crop_attachment( $original_attachment_id, $crop ) {
 		if ( empty( $crop ) || ! isset( $crop['sw'], $crop['sh'], $crop['sx'], $crop['sy'] ) || ! $crop['sw'] || ! $crop['sh'] ) {
 			return new WP_Error( 'pps_invalid_crop', __( 'Geen geldige uitsnede-gegevens.', 'photo-print-studio' ) );
+		}
+
+		if ( ! function_exists( 'imagecreatetruecolor' ) ) {
+			return new WP_Error( 'pps_no_gd', __( 'Beeldbewerking (GD) is niet beschikbaar op deze server.', 'photo-print-studio' ) );
 		}
 
 		$original_path = get_attached_file( $original_attachment_id );
@@ -352,48 +389,53 @@ class PPS_Image {
 			return new WP_Error( 'pps_source_too_large', __( 'Bestand te groot om automatisch uit te snijden.', 'photo-print-studio' ) );
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/image.php';
-
-		$editor = wp_get_image_editor( $original_path );
-		if ( is_wp_error( $editor ) ) {
-			return $editor;
+		$source = self::gd_load( $original_path, get_post_mime_type( $original_attachment_id ) );
+		if ( ! $source ) {
+			return new WP_Error( 'pps_unsupported_format', __( 'Dit bestandstype kan niet automatisch uitgesneden worden (bv. TIFF zonder Imagick).', 'photo-print-studio' ) );
 		}
 
-		// The wizard's rotation is clockwise (matching <canvas> rotate()),
-		// while WP_Image_Editor::rotate() turns counter-clockwise -- so the
-		// two need converting between one another.
+		$source_w = imagesx( $source );
+		$source_h = imagesy( $source );
+
+		// Clamp to the actual source bounds -- protects against rounding
+		// drift ever requesting a region outside the image.
+		$sx = max( 0, min( (int) round( $crop['sx'] ), $source_w - 1 ) );
+		$sy = max( 0, min( (int) round( $crop['sy'] ), $source_h - 1 ) );
+		$sw = max( 1, min( (int) round( $crop['sw'] ), $source_w - $sx ) );
+		$sh = max( 1, min( (int) round( $crop['sh'] ), $source_h - $sy ) );
+
+		$dest = imagecreatetruecolor( $sw, $sh );
+		imagecopyresampled( $dest, $source, 0, 0, $sx, $sy, $sw, $sh, $sw, $sh );
+		imagedestroy( $source );
+
+		// Rotate the (small, already-cropped) result to its final print
+		// orientation. imagerotate() turns counter-clockwise for positive
+		// angles (confirmed by test), while the wizard's rotation value is
+		// clockwise (matching how the crop frame is shown) -- negate to
+		// convert between the two.
 		$rotation = ! empty( $crop['rotation'] ) ? ( (int) round( $crop['rotation'] ) ) % 360 : 0;
 		if ( $rotation ) {
-			$rotated = $editor->rotate( ( 360 - $rotation ) % 360 );
-			if ( is_wp_error( $rotated ) ) {
-				return $rotated;
+			$rotated = imagerotate( $dest, -$rotation, 0 );
+			if ( $rotated ) {
+				imagedestroy( $dest );
+				$dest = $rotated;
 			}
 		}
-
-		$cropped = $editor->crop(
-			(int) round( $crop['sx'] ),
-			(int) round( $crop['sy'] ),
-			(int) round( $crop['sw'] ),
-			(int) round( $crop['sh'] ),
-			null,
-			null,
-			true // Absolute pixel coordinates (not percentages).
-		);
-		if ( is_wp_error( $cropped ) ) {
-			return $cropped;
-		}
-
-		$editor->set_quality( 95 );
 
 		$upload_dir = wp_upload_dir();
 		$crop_dir   = trailingslashit( $upload_dir['basedir'] ) . 'pps-uploads/crops/';
 		wp_mkdir_p( $crop_dir );
 
-		$filename = wp_unique_filename( $crop_dir, 'print-crop-' . $original_attachment_id . '.jpg' );
-		$saved    = $editor->save( $crop_dir . $filename, 'image/jpeg' );
-		if ( is_wp_error( $saved ) ) {
-			return $saved;
+		$filename  = wp_unique_filename( $crop_dir, 'print-crop-' . $original_attachment_id . '.jpg' );
+		$dest_path = $crop_dir . $filename;
+		$saved     = imagejpeg( $dest, $dest_path, 95 );
+		imagedestroy( $dest );
+
+		if ( ! $saved ) {
+			return new WP_Error( 'pps_save_failed', __( 'Kon de uitsnede niet opslaan.', 'photo-print-studio' ) );
 		}
+
+		require_once ABSPATH . 'wp-admin/includes/image.php';
 
 		$attachment = array(
 			'post_mime_type' => 'image/jpeg',
@@ -402,12 +444,12 @@ class PPS_Image {
 			'post_status'    => 'private',
 		);
 
-		$attachment_id = wp_insert_attachment( $attachment, $saved['path'] );
+		$attachment_id = wp_insert_attachment( $attachment, $dest_path );
 		if ( is_wp_error( $attachment_id ) ) {
 			return $attachment_id;
 		}
 
-		$metadata = wp_generate_attachment_metadata( $attachment_id, $saved['path'] );
+		$metadata = wp_generate_attachment_metadata( $attachment_id, $dest_path );
 		wp_update_attachment_metadata( $attachment_id, $metadata );
 
 		return array(

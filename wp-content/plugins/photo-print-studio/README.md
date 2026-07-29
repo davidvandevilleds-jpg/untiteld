@@ -68,17 +68,26 @@ effectieve resolutie onder de ingestelde minimale DPI zakt, verschijnt bij
 die foto automatisch een waarschuwing en een knop om de interactieve
 uitsnede-tool te openen:
 
-De klant ziet steeds de volledige foto; daarover ligt een kader in de
-verhouding van het gekozen formaat (het gedeelte buiten het kader is
-gedimd):
+De klant ziet steeds de volledige foto, altijd rechtop -- de foto zelf
+wordt nooit gedraaid. Daarover ligt een kader in de verhouding van het
+gekozen formaat (het gedeelte buiten het kader is gedimd):
 
-- **Verschuiven**: sleep het kader over de foto om te kiezen wat wordt
-  afgedrukt.
+- **Verschuiven**: sleep het kader over de (stilstaande) foto om te
+  kiezen wat wordt afgedrukt.
 - **Zoomen**: schuifregelaar om het kader kleiner (verder ingezoomd) of
   groter te maken.
-- **90° draaien**: knop om de foto in stappen van 90° te roteren, handig
-  wanneer een liggende foto op een staand formaat (of omgekeerd) moet
-  passen.
+- **Kader 90° draaien**: knop om de richting van het kader een kwartslag
+  te draaien -- niet de foto zelf. Handig wanneer een liggende foto op
+  een staand formaat (of omgekeerd) moet passen. Zodra een formaat
+  gekozen wordt, staat het kader automatisch al in de richting die het
+  best bij de foto past (liggend/staand), zonder dat de klant zelf moet
+  draaien.
+
+Wanneer het gekozen formaat een andere beeldverhouding heeft dan de foto
+zelf -- en er dus sowieso een stuk van de foto buiten het afdrukkader
+zal vallen -- toont de wizard bij die foto een duidelijke waarschuwing
+("Dit formaat past niet op de vorm van uw foto") zodat dit nooit een
+verrassing is.
 
 Ook wanneer een foto al perfect past, kan de klant via de knop "Uitsnede
 zelf aanpassen" bij die foto de tool altijd zelf openen om de compositie

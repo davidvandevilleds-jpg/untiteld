@@ -893,18 +893,68 @@
 		photo.rotation = 0;
 		photo.zoom = 1;
 		photo.pricing = null;
-
-		if ( rotatedForUrl === photo.imgUrl ) {
-			rotatedForUrl = null;
-			rotatedForAngle = null;
-		}
 	}
 
 	/**
-	 * Runs /dpi-check for one photo against its own chosen format, and
-	 * assigns it a sensible default crop immediately -- even if the tool
-	 * never gets opened, a plain, unrotated full-image crop is recorded for
-	 * production.
+	 * The photo is always shown upright, at its own natural orientation --
+	 * "rotation" here really means "which way is the chosen format's frame
+	 * being read against the photo": 0 keeps width/height as chosen, 90
+	 * swaps them (frame turned a quarter turn). Picks whichever of the two
+	 * matches the photo's own landscape/portrait shape, so the frame starts
+	 * out already lined up with the photo instead of cropping needlessly.
+	 *
+	 * @param {Object} photo
+	 * @return {number} 0 or 90
+	 */
+	function pickDefaultRotation( photo ) {
+		var photoIsLandscape = photo.imgWidth >= photo.imgHeight;
+		var targetIsLandscape = photo.widthCm >= photo.heightCm;
+		return photoIsLandscape === targetIsLandscape ? 0 : 90;
+	}
+
+	/**
+	 * The chosen format's width/height, swapped if the frame is currently
+	 * turned a quarter turn against the photo.
+	 *
+	 * @param {Object} photo
+	 * @return {{w: number, h: number}}
+	 */
+	function effectiveTarget( photo ) {
+		return 90 === photo.rotation
+			? { w: photo.heightCm, h: photo.widthCm }
+			: { w: photo.widthCm, h: photo.heightCm };
+	}
+
+	/**
+	 * Re-derives dpi/needs-crop info for the current frame orientation,
+	 * purely client-side (same formula as PPS_Pricing::effective_dpi), so
+	 * the quality warning stays accurate after the customer turns the
+	 * frame.
+	 *
+	 * @param {Object} photo
+	 */
+	function updateDpiInfoForOrientation( photo ) {
+		var target = effectiveTarget( photo );
+		var dpiW = effectiveDpi( photo.imgWidth, target.w );
+		var dpiH = effectiveDpi( photo.imgHeight, target.h );
+		var dpi = Math.min( dpiW, dpiH );
+		var sourceRatio = photo.imgWidth / photo.imgHeight;
+		var targetRatio = target.w / target.h;
+		var threshold = photo.dpiInfo ? photo.dpiInfo.threshold : ( ( state.catalogue.settings && state.catalogue.settings.dpi_threshold ) || 200 );
+
+		photo.dpiInfo = {
+			dpi: Math.round( dpi * 10 ) / 10,
+			threshold: threshold,
+			below_threshold: dpi < threshold,
+			needs_crop: Math.round( sourceRatio * 1000 ) !== Math.round( targetRatio * 1000 ),
+		};
+	}
+
+	/**
+	 * Runs /dpi-check for one photo against its own chosen format, picks a
+	 * default frame orientation matching the photo's own shape, and assigns
+	 * it a sensible default crop immediately -- even if the tool never gets
+	 * opened, a plain crop is recorded for production.
 	 *
 	 * @param {Object} photo
 	 */
@@ -925,20 +975,11 @@
 				height_cm: photo.heightCm,
 			} ),
 		} )
-			.then( function ( data ) {
-				photo.dpiInfo = data;
-				photo.showCropTool = data.below_threshold || data.needs_crop;
-
-				var base = computeBaseCrop( photo.imgWidth, photo.imgHeight, photo.widthCm, photo.heightCm );
-				photo.rotation = 0;
-				photo.zoom = 1;
-				photo.crop = {
-					sw: base.sw,
-					sh: base.sh,
-					sx: ( photo.imgWidth - base.sw ) / 2,
-					sy: ( photo.imgHeight - base.sh ) / 2,
-					rotation: 0,
-				};
+			.then( function () {
+				photo.rotation = pickDefaultRotation( photo );
+				updateDpiInfoForOrientation( photo );
+				photo.showCropTool = photo.dpiInfo.below_threshold || photo.dpiInfo.needs_crop;
+				setDefaultCrop( photo );
 
 				state.dpiCheckInFlight = false;
 				render();
@@ -983,6 +1024,13 @@
 
 		wrap.appendChild( row );
 
+		if ( photo.dpiInfo && photo.dpiInfo.needs_crop ) {
+			var mismatch = document.createElement( 'div' );
+			mismatch.className = 'pps-warning pps-format-mismatch';
+			mismatch.innerHTML = '<strong>' + t( 'formatMismatchTitle' ) + '</strong><br />' + t( 'formatMismatchBody' );
+			wrap.appendChild( mismatch );
+		}
+
 		if ( photo.cropEditorOpen && photo.dpiInfo ) {
 			wrap.appendChild( renderCropSection( photo ) );
 		}
@@ -990,10 +1038,11 @@
 		return wrap;
 	}
 
-	/* ---- crop tool (operates on one photo object at a time) ---- */
+	/* ---- crop tool (operates on one photo object at a time; the photo   */
+	/* itself is never rotated -- only the frame's orientation toggles)    */
 
 	var cropCanvas, cropCtx, cropDrag;
-	var originalImage, rotatedSource, rotatedWidth, rotatedHeight, rotatedForUrl, rotatedForAngle;
+	var originalImage;
 
 	function renderCropSection( photo ) {
 		var section = document.createElement( 'div' );
@@ -1014,10 +1063,7 @@
 		cropBox.className = 'pps-crop';
 
 		cropCanvas = document.createElement( 'canvas' );
-		var swapped = 90 === photo.rotation || 270 === photo.rotation;
-		var effW = swapped ? photo.imgHeight : photo.imgWidth;
-		var effH = swapped ? photo.imgWidth : photo.imgHeight;
-		var box = fitImageBox( effW, effH, 560, 480 );
+		var box = fitImageBox( photo.imgWidth, photo.imgHeight, 560, 480 );
 		cropCanvas.width = box.w;
 		cropCanvas.height = box.h;
 		cropCtx = cropCanvas.getContext( '2d' );
@@ -1045,17 +1091,18 @@
 		rotateBtn.className = 'pps-btn pps-btn--secondary pps-rotate-btn';
 		rotateBtn.textContent = t( 'rotate' );
 		rotateBtn.addEventListener( 'click', function () {
-			photo.rotation = ( photo.rotation + 90 ) % 360;
-			rebuildRotatedSource( photo );
+			// Only the frame's orientation toggles here -- the photo itself
+			// stays exactly as drawn; see the module comment above.
+			photo.rotation = 90 === photo.rotation ? 0 : 90;
 			setDefaultCrop( photo );
-			updateDpiInfoForRotation( photo );
+			updateDpiInfoForOrientation( photo );
 			render();
 		} );
 		controls.appendChild( rotateBtn );
 
 		section.appendChild( controls );
 
-		ensureRotatedSource( photo, function () {
+		loadOriginalImage( photo, function () {
 			drawCrop( photo );
 			attachCropDrag( photo );
 		} );
@@ -1079,7 +1126,9 @@
 	}
 
 	/**
-	 * Loads the untouched uploaded photo once per image URL.
+	 * Loads the untouched uploaded photo once per image URL. The photo is
+	 * always drawn at this natural orientation -- it never gets rotated on
+	 * screen, only the crop frame's orientation changes.
 	 */
 	function loadOriginalImage( photo, cb ) {
 		if ( originalImage && originalImage.src === photo.imgUrl ) {
@@ -1092,83 +1141,9 @@
 		originalImage.src = photo.imgUrl;
 	}
 
-	/**
-	 * Ensures the crop tool has a same-orientation-as-selected-rotation
-	 * source to draw from. Cached per (photo, angle) so dragging/zooming
-	 * never re-does this.
-	 */
-	function ensureRotatedSource( photo, cb ) {
-		loadOriginalImage( photo, function () {
-			rebuildRotatedSource( photo );
-			cb();
-		} );
-	}
-
-	/**
-	 * Synchronously (re)builds the rotated source for one photo's current
-	 * rotation. Assumes the original image is already loaded, which is
-	 * always true once the crop tool is visible for that photo.
-	 */
-	function rebuildRotatedSource( photo ) {
-		if ( rotatedForUrl === photo.imgUrl && rotatedForAngle === photo.rotation && rotatedSource ) {
-			return;
-		}
-
-		if ( 0 === photo.rotation ) {
-			rotatedSource = originalImage;
-			rotatedWidth = photo.imgWidth;
-			rotatedHeight = photo.imgHeight;
-			rotatedForUrl = photo.imgUrl;
-			rotatedForAngle = 0;
-			return;
-		}
-
-		var swapped = 90 === photo.rotation || 270 === photo.rotation;
-		var canvas = document.createElement( 'canvas' );
-		canvas.width = swapped ? photo.imgHeight : photo.imgWidth;
-		canvas.height = swapped ? photo.imgWidth : photo.imgHeight;
-
-		var ctx = canvas.getContext( '2d' );
-		ctx.save();
-		ctx.translate( canvas.width / 2, canvas.height / 2 );
-		ctx.rotate( ( photo.rotation * Math.PI ) / 180 );
-		ctx.drawImage( originalImage, -photo.imgWidth / 2, -photo.imgHeight / 2 );
-		ctx.restore();
-
-		rotatedSource = canvas;
-		rotatedWidth = canvas.width;
-		rotatedHeight = canvas.height;
-		rotatedForUrl = photo.imgUrl;
-		rotatedForAngle = photo.rotation;
-	}
-
-	/**
-	 * Re-derives dpi/needs-crop info for the current rotation, purely
-	 * client-side (same formula as PPS_Pricing::effective_dpi), so the
-	 * quality warning stays accurate after the customer rotates the photo.
-	 */
-	function updateDpiInfoForRotation( photo ) {
-		if ( ! photo.dpiInfo ) {
-			return;
-		}
-		var dpiW = effectiveDpi( rotatedWidth, photo.widthCm );
-		var dpiH = effectiveDpi( rotatedHeight, photo.heightCm );
-		var dpi = Math.min( dpiW, dpiH );
-		var sourceRatio = rotatedWidth / rotatedHeight;
-		var targetRatio = photo.widthCm / photo.heightCm;
-
-		photo.dpiInfo = {
-			dpi: Math.round( dpi * 10 ) / 10,
-			threshold: photo.dpiInfo.threshold,
-			below_threshold: dpi < photo.dpiInfo.threshold,
-			needs_crop: Math.round( sourceRatio * 1000 ) !== Math.round( targetRatio * 1000 ),
-			source_width: rotatedWidth,
-			source_height: rotatedHeight,
-		};
-	}
-
 	function baseCropSize( photo ) {
-		return computeBaseCrop( rotatedWidth, rotatedHeight, photo.widthCm, photo.heightCm );
+		var target = effectiveTarget( photo );
+		return computeBaseCrop( photo.imgWidth, photo.imgHeight, target.w, target.h );
 	}
 
 	function setDefaultCrop( photo ) {
@@ -1177,8 +1152,8 @@
 		photo.crop = {
 			sw: base.sw,
 			sh: base.sh,
-			sx: ( rotatedWidth - base.sw ) / 2,
-			sy: ( rotatedHeight - base.sh ) / 2,
+			sx: ( photo.imgWidth - base.sw ) / 2,
+			sy: ( photo.imgHeight - base.sh ) / 2,
 			rotation: photo.rotation,
 		};
 	}
@@ -1193,26 +1168,27 @@
 		var cx = photo.crop.sx + photo.crop.sw / 2;
 		var cy = photo.crop.sy + photo.crop.sh / 2;
 
-		var sx = clamp( cx - sw / 2, 0, rotatedWidth - sw );
-		var sy = clamp( cy - sh / 2, 0, rotatedHeight - sh );
+		var sx = clamp( cx - sw / 2, 0, photo.imgWidth - sw );
+		var sy = clamp( cy - sh / 2, 0, photo.imgHeight - sh );
 
 		photo.crop = { sw: sw, sh: sh, sx: sx, sy: sy, rotation: photo.rotation };
 	}
 
 	/**
-	 * Draws the whole photo (scaled to fit the canvas) with a movable frame
-	 * overlaid on top, in the requested format's aspect ratio -- dimmed
-	 * outside the frame so it's obvious what will and won't be printed.
+	 * Draws the whole photo (scaled to fit the canvas, always at its own
+	 * natural orientation -- never rotated) with a movable frame overlaid
+	 * on top, in the requested format's aspect ratio -- dimmed outside the
+	 * frame so it's obvious what will and won't be printed.
 	 */
 	function drawCrop( photo ) {
 		if ( ! cropCtx || ! photo.crop ) {
 			return;
 		}
 
-		var scale = cropCanvas.width / rotatedWidth;
+		var scale = cropCanvas.width / photo.imgWidth;
 
 		cropCtx.clearRect( 0, 0, cropCanvas.width, cropCanvas.height );
-		cropCtx.drawImage( rotatedSource, 0, 0, rotatedWidth, rotatedHeight, 0, 0, cropCanvas.width, cropCanvas.height );
+		cropCtx.drawImage( originalImage, 0, 0, photo.imgWidth, photo.imgHeight, 0, 0, cropCanvas.width, cropCanvas.height );
 
 		var frameX = photo.crop.sx * scale;
 		var frameY = photo.crop.sy * scale;
@@ -1232,7 +1208,7 @@
 
 	/**
 	 * Lets the customer drag the frame around over the (static, fully
-	 * visible) photo to choose what falls inside it.
+	 * visible, never-rotated) photo to choose what falls inside it.
 	 */
 	function attachCropDrag( photo ) {
 		var box = cropCanvas.parentElement;
@@ -1257,12 +1233,12 @@
 			if ( ! cropDrag ) {
 				return;
 			}
-			var scale = cropCanvas.width / rotatedWidth;
+			var scale = cropCanvas.width / photo.imgWidth;
 			var dxSource = ( ( e.clientX - cropDrag.x ) * cropDrag.cssToCanvas ) / scale;
 			var dySource = ( ( e.clientY - cropDrag.y ) * cropDrag.cssToCanvas ) / scale;
 
-			photo.crop.sx = clamp( cropDrag.sx + dxSource, 0, rotatedWidth - photo.crop.sw );
-			photo.crop.sy = clamp( cropDrag.sy + dySource, 0, rotatedHeight - photo.crop.sh );
+			photo.crop.sx = clamp( cropDrag.sx + dxSource, 0, photo.imgWidth - photo.crop.sw );
+			photo.crop.sy = clamp( cropDrag.sy + dySource, 0, photo.imgHeight - photo.crop.sh );
 			drawCrop( photo );
 		} );
 

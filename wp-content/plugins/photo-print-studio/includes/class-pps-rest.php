@@ -36,10 +36,30 @@ class PPS_Rest {
 	public function register_routes() {
 		register_rest_route(
 			self::NAMESPACE_V1,
-			'/upload',
+			'/upload/init',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( $this, 'upload' ),
+				'callback'            => array( $this, 'upload_init' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/upload/chunk',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'upload_chunk' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/upload/complete',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'upload_complete' ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -91,25 +111,71 @@ class PPS_Rest {
 	}
 
 	/**
-	 * POST /upload -- accepts a multipart file under the "photo" key.
+	 * POST /upload/init -- starts a chunked upload session for one photo.
 	 *
 	 * @param WP_REST_Request $request
 	 * @return WP_REST_Response|WP_Error
 	 */
-	public function upload( WP_REST_Request $request ) {
-		$files = $request->get_file_params();
+	public function upload_init( WP_REST_Request $request ) {
+		$result = PPS_Image::start_upload(
+			(string) $request->get_param( 'filename' ),
+			$request->get_param( 'filesize' ),
+			(string) $request->get_param( 'mime_type' )
+		);
 
-		if ( empty( $files['photo'] ) ) {
-			return new WP_Error( 'pps_no_file', __( 'Geen foto ontvangen.', 'photo-print-studio' ), array( 'status' => 400 ) );
-		}
-
-		$result = PPS_Image::handle_upload( $files['photo'] );
 		if ( is_wp_error( $result ) ) {
 			$result->add_data( array( 'status' => 400 ) );
 			return $result;
 		}
 
-		$settings = PPS_Settings::get();
+		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * POST /upload/chunk -- appends one chunk (multipart field "chunk") to
+	 * an upload session started via /upload/init.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function upload_chunk( WP_REST_Request $request ) {
+		$files = $request->get_file_params();
+
+		if ( empty( $files['chunk']['tmp_name'] ) || UPLOAD_ERR_OK !== $files['chunk']['error'] ) {
+			return new WP_Error( 'pps_upload_error', __( 'Fragment niet ontvangen. Probeer opnieuw.', 'photo-print-studio' ), array( 'status' => 400 ) );
+		}
+
+		$result = PPS_Image::write_chunk(
+			(string) $request->get_param( 'upload_id' ),
+			absint( $request->get_param( 'index' ) ),
+			absint( $request->get_param( 'chunk_size' ) ),
+			$files['chunk']['tmp_name']
+		);
+
+		if ( is_wp_error( $result ) ) {
+			$result->add_data( array( 'status' => 400 ) );
+			return $result;
+		}
+
+		return rest_ensure_response( array( 'success' => true ) );
+	}
+
+	/**
+	 * POST /upload/complete -- finalises a chunked upload session into a
+	 * Media Library attachment once every chunk has been sent.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function upload_complete( WP_REST_Request $request ) {
+		$result = PPS_Image::complete_upload( (string) $request->get_param( 'upload_id' ) );
+
+		if ( is_wp_error( $result ) ) {
+			$result->add_data( array( 'status' => 400 ) );
+			return $result;
+		}
+
+		$settings  = PPS_Settings::get();
 		$threshold = (float) $settings['dpi_threshold'];
 
 		// Suggested maximum print size (in cm, on the long edge) at which

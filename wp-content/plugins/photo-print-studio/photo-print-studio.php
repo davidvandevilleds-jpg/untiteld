@@ -68,6 +68,10 @@ function pps_activate() {
 	PPS_CPT::register_post_types();
 	PPS_Install::activate();
 
+	if ( ! wp_next_scheduled( 'pps_cleanup_tmp_uploads' ) ) {
+		wp_schedule_event( time(), 'daily', 'pps_cleanup_tmp_uploads' );
+	}
+
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'pps_activate' );
@@ -78,6 +82,7 @@ register_activation_hook( __FILE__, 'pps_activate' );
  * shop owner opted in via settings.
  */
 function pps_deactivate() {
+	wp_clear_scheduled_hook( 'pps_cleanup_tmp_uploads' );
 	flush_rewrite_rules();
 }
 register_deactivation_hook( __FILE__, 'pps_deactivate' );

@@ -14,6 +14,11 @@
 
 	var STEP_KEYS = [ 'upload', 'check', 'size', 'mount', 'paper', 'finish', 'summary' ];
 
+	// Photos are uploaded in small chunks rather than one request so large
+	// files aren't blocked by the host's upload_max_filesize/post_max_size
+	// limits (settings this plugin cannot change from PHP at runtime).
+	var CHUNK_SIZE_BYTES = 2 * 1024 * 1024;
+
 	var state = {
 		step: 'upload',
 		file: null,
@@ -37,6 +42,7 @@
 		finishId: 0,
 		pricing: null,
 		busy: false,
+		uploadProgress: 0,
 		error: '',
 	};
 
@@ -296,7 +302,8 @@
 		if ( state.busy ) {
 			var progress = document.createElement( 'div' );
 			progress.className = 'pps-upload-progress';
-			progress.textContent = t( 'uploading' );
+			progress.setAttribute( 'data-pps-upload-progress', '' );
+			progress.textContent = t( 'uploading' ) + ' ' + state.uploadProgress + '%';
 			wrap.appendChild( progress );
 		}
 
@@ -306,14 +313,18 @@
 	function handleFile( file ) {
 		state.file = file;
 		state.busy = true;
+		state.uploadProgress = 0;
 		state.error = '';
 		render();
 
-		var formData = new FormData();
-		formData.append( 'photo', file );
-
 		Promise.all( [
-			apiFetch( '/upload', { method: 'POST', body: formData } ),
+			uploadFileChunked( file, function ( pct ) {
+				state.uploadProgress = pct;
+				var progressEl = root.querySelector( '[data-pps-upload-progress]' );
+				if ( progressEl ) {
+					progressEl.textContent = t( 'uploading' ) + ' ' + pct + '%';
+				}
+			} ),
 			state.catalogue ? Promise.resolve( state.catalogue ) : apiFetch( '/options' ),
 		] )
 			.then( function ( results ) {
@@ -332,6 +343,62 @@
 				state.error = err.message || t( 'uploadError' );
 				render();
 			} );
+	}
+
+	/**
+	 * Uploads a file in small sequential chunks: /upload/init starts a
+	 * session, each /upload/chunk call appends CHUNK_SIZE_BYTES worth of
+	 * data, and /upload/complete assembles + validates the result. Keeping
+	 * every individual request small sidesteps hosting limits on the total
+	 * size of a single request that would otherwise reject large photos.
+	 *
+	 * @param {File}     file
+	 * @param {Function} onProgress Called with a 0-100 percentage.
+	 * @return {Promise}
+	 */
+	function uploadFileChunked( file, onProgress ) {
+		return apiFetch( '/upload/init', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify( {
+				filename: file.name,
+				filesize: file.size,
+				mime_type: file.type,
+			} ),
+		} ).then( function ( initData ) {
+			var uploadId = initData.upload_id;
+			var totalChunks = Math.max( 1, Math.ceil( file.size / CHUNK_SIZE_BYTES ) );
+
+			function uploadNext( index ) {
+				if ( index >= totalChunks ) {
+					if ( onProgress ) {
+						onProgress( 100 );
+					}
+					return apiFetch( '/upload/complete', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify( { upload_id: uploadId } ),
+					} );
+				}
+
+				var start = index * CHUNK_SIZE_BYTES;
+				var blob = file.slice( start, start + CHUNK_SIZE_BYTES );
+				var formData = new FormData();
+				formData.append( 'upload_id', uploadId );
+				formData.append( 'index', index );
+				formData.append( 'chunk_size', CHUNK_SIZE_BYTES );
+				formData.append( 'chunk', blob, 'chunk' );
+
+				return apiFetch( '/upload/chunk', { method: 'POST', body: formData } ).then( function () {
+					if ( onProgress ) {
+						onProgress( Math.round( ( ( index + 1 ) / totalChunks ) * 100 ) );
+					}
+					return uploadNext( index + 1 );
+				} );
+			}
+
+			return uploadNext( 0 );
+		} );
 	}
 
 	/* ------------------------------------------------------------------ */
@@ -423,6 +490,21 @@
 
 		if ( state.useCustomSize ) {
 			wrap.appendChild( renderCustomSizeForm() );
+		}
+
+		// The crop tool opens automatically when the photo doesn't match
+		// the chosen format/DPI, but customers can also open it themselves
+		// at any time to fine-tune framing or rotate the photo.
+		if ( state.dpiInfo && ! state.showCropTool ) {
+			var manualCropBtn = document.createElement( 'button' );
+			manualCropBtn.type = 'button';
+			manualCropBtn.className = 'pps-btn pps-btn--secondary pps-manual-crop-btn';
+			manualCropBtn.textContent = t( 'adjustCrop' );
+			manualCropBtn.addEventListener( 'click', function () {
+				state.showCropTool = true;
+				render();
+			} );
+			wrap.appendChild( manualCropBtn );
 		}
 
 		if ( state.showCropTool ) {

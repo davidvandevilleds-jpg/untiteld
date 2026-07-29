@@ -5,6 +5,13 @@
  * and download the original from the order screen), and reading pixel
  * dimensions for the DPI check.
  *
+ * Uploads happen in small chunks (see PPS_Rest's /upload/init, /upload/chunk
+ * and /upload/complete routes) instead of one single multipart request.
+ * Many hosts cap a single request's body at a few MB via upload_max_filesize
+ * / post_max_size (a setting this plugin cannot change from PHP at runtime),
+ * so chunking keeps every individual request small regardless of how large
+ * the customer's original photo is.
+ *
  * @package PhotoPrintStudio
  */
 
@@ -13,6 +20,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class PPS_Image {
+
+	const SESSION_PREFIX = 'pps_upload_';
+	const SESSION_TTL    = 3 * HOUR_IN_SECONDS;
 
 	/**
 	 * @return array Allowed upload mime types, keyed by extension.
@@ -27,35 +37,52 @@ class PPS_Image {
 	}
 
 	/**
-	 * @return int Maximum upload size in bytes (default 200 MB, filterable
-	 *             for large TIFFs used in fine-art printing).
+	 * @return int Maximum total upload size in bytes (default 200 MB,
+	 *             filterable for large TIFFs used in fine-art printing).
 	 */
 	public static function max_upload_bytes() {
 		return (int) apply_filters( 'pps_max_upload_bytes', 200 * MB_IN_BYTES );
 	}
 
 	/**
-	 * Validate and store an uploaded file (from $_FILES) as a Media Library
-	 * attachment.
-	 *
-	 * @param array $file A single entry from $_FILES.
-	 * @return array|WP_Error {
-	 *     @type int    $attachment_id
-	 *     @type string $url
-	 *     @type int    $width
-	 *     @type int    $height
-	 * }
+	 * @return int Maximum size of a single chunk (defensive upper bound;
+	 *             the wizard itself sends much smaller chunks).
 	 */
-	public static function handle_upload( $file ) {
-		if ( empty( $file ) || ! isset( $file['tmp_name'], $file['name'], $file['size'], $file['error'] ) ) {
-			return new WP_Error( 'pps_no_file', __( 'Geen bestand ontvangen.', 'photo-print-studio' ) );
+	public static function max_chunk_bytes() {
+		return (int) apply_filters( 'pps_max_chunk_bytes', 8 * MB_IN_BYTES );
+	}
+
+	/**
+	 * @return string Absolute path to the directory temp chunks are
+	 *                 assembled in.
+	 */
+	private static function tmp_dir() {
+		$upload_dir = wp_upload_dir();
+		$dir        = trailingslashit( $upload_dir['basedir'] ) . 'pps-uploads/tmp/';
+
+		if ( ! file_exists( $dir ) ) {
+			wp_mkdir_p( $dir );
 		}
 
-		if ( UPLOAD_ERR_OK !== $file['error'] ) {
-			return new WP_Error( 'pps_upload_error', __( 'Upload mislukt. Probeer opnieuw.', 'photo-print-studio' ) );
+		return $dir;
+	}
+
+	/**
+	 * Starts a new chunked-upload session.
+	 *
+	 * @param string $filename  Original filename (for extension/type checks).
+	 * @param int    $filesize  Declared total size in bytes.
+	 * @param string $mime_type Declared mime type.
+	 * @return array|WP_Error { @type string $upload_id }
+	 */
+	public static function start_upload( $filename, $filesize, $mime_type ) {
+		$filesize = (int) $filesize;
+
+		if ( $filesize <= 0 ) {
+			return new WP_Error( 'pps_invalid_size', __( 'Ongeldige bestandsgrootte.', 'photo-print-studio' ) );
 		}
 
-		if ( $file['size'] > self::max_upload_bytes() ) {
+		if ( $filesize > self::max_upload_bytes() ) {
 			return new WP_Error(
 				'pps_file_too_large',
 				sprintf(
@@ -66,54 +93,180 @@ class PPS_Image {
 			);
 		}
 
+		$filetype = wp_check_filetype( $filename, self::allowed_mime_types() );
+		if ( ! $filetype['ext'] ) {
+			return new WP_Error( 'pps_invalid_type', __( 'Dit bestandstype wordt niet ondersteund. Gebruik JPG, PNG, TIFF of WEBP.', 'photo-print-studio' ) );
+		}
+
+		$upload_id = wp_generate_uuid4();
+		$tmp_path  = self::tmp_dir() . $upload_id . '.part';
+
+		// Pre-allocate an empty file so chunk writes can seek freely.
+		if ( false === file_put_contents( $tmp_path, '' ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			return new WP_Error( 'pps_upload_error', __( 'Kon de upload niet starten. Probeer opnieuw.', 'photo-print-studio' ) );
+		}
+
+		set_transient(
+			self::SESSION_PREFIX . $upload_id,
+			array(
+				'filename'  => sanitize_file_name( $filename ),
+				'ext'       => $filetype['ext'],
+				'filesize'  => $filesize,
+				'tmp_path'  => $tmp_path,
+			),
+			self::SESSION_TTL
+		);
+
+		return array( 'upload_id' => $upload_id );
+	}
+
+	/**
+	 * Writes one chunk of a previously-started upload session at its
+	 * correct byte offset, so retried/out-of-order chunks are harmless.
+	 *
+	 * @param string $upload_id
+	 * @param int    $index      Zero-based chunk index.
+	 * @param int    $chunk_size The chunk size the client is using (bytes).
+	 * @param string $tmp_file   Path to the chunk's own PHP temp upload file.
+	 * @return true|WP_Error
+	 */
+	public static function write_chunk( $upload_id, $index, $chunk_size, $tmp_file ) {
+		$session = get_transient( self::SESSION_PREFIX . $upload_id );
+		if ( ! $session ) {
+			return new WP_Error( 'pps_unknown_upload', __( 'Onbekende of verlopen upload-sessie. Begin opnieuw.', 'photo-print-studio' ) );
+		}
+
+		$chunk_bytes = @filesize( $tmp_file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( ! $chunk_bytes || $chunk_bytes > self::max_chunk_bytes() ) {
+			return new WP_Error( 'pps_chunk_too_large', __( 'Ongeldig fragment ontvangen.', 'photo-print-studio' ) );
+		}
+
+		$offset = absint( $index ) * absint( $chunk_size );
+
+		$handle = @fopen( $session['tmp_path'], 'cb' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( ! $handle ) {
+			return new WP_Error( 'pps_upload_error', __( 'Kon fragment niet opslaan. Probeer opnieuw.', 'photo-print-studio' ) );
+		}
+
+		fseek( $handle, $offset );
+		fwrite( $handle, file_get_contents( $tmp_file ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_get_contents
+		fclose( $handle );
+
+		// Refresh the session TTL on activity.
+		set_transient( self::SESSION_PREFIX . $upload_id, $session, self::SESSION_TTL );
+
+		return true;
+	}
+
+	/**
+	 * Finalises a chunked upload: validates the assembled file, stores it as
+	 * a Media Library attachment, and returns the same shape the wizard
+	 * expects.
+	 *
+	 * @param string $upload_id
+	 * @return array|WP_Error {
+	 *     @type int    $attachment_id
+	 *     @type string $url
+	 *     @type int    $width
+	 *     @type int    $height
+	 * }
+	 */
+	public static function complete_upload( $upload_id ) {
+		$session = get_transient( self::SESSION_PREFIX . $upload_id );
+		if ( ! $session ) {
+			return new WP_Error( 'pps_unknown_upload', __( 'Onbekende of verlopen upload-sessie. Begin opnieuw.', 'photo-print-studio' ) );
+		}
+
+		$tmp_path    = $session['tmp_path'];
+		$actual_size = @filesize( $tmp_path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+
+		if ( ! $actual_size || $actual_size < $session['filesize'] ) {
+			return new WP_Error( 'pps_incomplete_upload', __( 'De upload is niet volledig aangekomen. Probeer opnieuw.', 'photo-print-studio' ) );
+		}
+
+		$dimensions = @getimagesize( $tmp_path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		if ( ! $dimensions ) {
+			self::cleanup_session( $upload_id, $session );
+			return new WP_Error( 'pps_invalid_image', __( 'Dit lijkt geen geldige afbeelding te zijn.', 'photo-print-studio' ) );
+		}
+
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 
-		$overrides = array(
-			'test_form' => false,
-			'mimes'     => self::allowed_mime_types(),
-		);
-
 		add_filter( 'upload_dir', array( __CLASS__, 'filter_upload_dir' ) );
-		$sideloaded = wp_handle_upload( $file, $overrides );
+		$upload_dir = wp_upload_dir();
 		remove_filter( 'upload_dir', array( __CLASS__, 'filter_upload_dir' ) );
 
-		if ( isset( $sideloaded['error'] ) ) {
-			return new WP_Error( 'pps_upload_error', $sideloaded['error'] );
+		if ( ! wp_mkdir_p( $upload_dir['path'] ) ) {
+			self::cleanup_session( $upload_id, $session );
+			return new WP_Error( 'pps_upload_error', __( 'Kon de foto niet opslaan. Probeer opnieuw.', 'photo-print-studio' ) );
 		}
 
-		$dimensions = @getimagesize( $sideloaded['file'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-		if ( ! $dimensions ) {
-			wp_delete_file( $sideloaded['file'] );
-			return new WP_Error( 'pps_invalid_image', __( 'Dit lijkt geen geldige afbeelding te zijn.', 'photo-print-studio' ) );
+		$final_filename = wp_unique_filename( $upload_dir['path'], $session['filename'] );
+		$final_path     = trailingslashit( $upload_dir['path'] ) . $final_filename;
+
+		if ( ! @rename( $tmp_path, $final_path ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			self::cleanup_session( $upload_id, $session );
+			return new WP_Error( 'pps_upload_error', __( 'Kon de foto niet opslaan. Probeer opnieuw.', 'photo-print-studio' ) );
 		}
 
+		$mime_type  = self::allowed_mime_types();
+		$filetype   = wp_check_filetype( $final_filename, $mime_type );
 		$attachment = array(
-			'post_mime_type' => $sideloaded['type'],
-			'post_title'     => sanitize_file_name( pathinfo( $file['name'], PATHINFO_FILENAME ) ),
+			'post_mime_type' => $filetype['type'],
+			'post_title'     => sanitize_file_name( pathinfo( $session['filename'], PATHINFO_FILENAME ) ),
 			'post_content'   => '',
 			'post_status'    => 'private',
 		);
 
-		$attachment_id = wp_insert_attachment( $attachment, $sideloaded['file'] );
+		$attachment_id = wp_insert_attachment( $attachment, $final_path );
 		if ( is_wp_error( $attachment_id ) ) {
+			self::cleanup_session( $upload_id, $session );
 			return $attachment_id;
 		}
 
-		$attachment_data = wp_generate_attachment_metadata( $attachment_id, $sideloaded['file'] );
+		$attachment_data = wp_generate_attachment_metadata( $attachment_id, $final_path );
 		wp_update_attachment_metadata( $attachment_id, $attachment_data );
 
 		update_post_meta( $attachment_id, '_pps_customer_upload', '1' );
 		update_post_meta( $attachment_id, '_pps_pixel_width', $dimensions[0] );
 		update_post_meta( $attachment_id, '_pps_pixel_height', $dimensions[1] );
 
+		delete_transient( self::SESSION_PREFIX . $upload_id );
+
 		return array(
 			'attachment_id' => $attachment_id,
-			'url'           => $sideloaded['url'],
+			'url'           => wp_get_attachment_url( $attachment_id ),
 			'width'         => $dimensions[0],
 			'height'        => $dimensions[1],
 		);
+	}
+
+	/**
+	 * Removes a failed/abandoned upload session's temp file and transient.
+	 *
+	 * @param string $upload_id
+	 * @param array  $session
+	 */
+	private static function cleanup_session( $upload_id, $session ) {
+		if ( ! empty( $session['tmp_path'] ) && file_exists( $session['tmp_path'] ) ) {
+			wp_delete_file( $session['tmp_path'] );
+		}
+		delete_transient( self::SESSION_PREFIX . $upload_id );
+	}
+
+	/**
+	 * Deletes temp chunk files left behind by abandoned uploads (started but
+	 * never completed within SESSION_TTL). Hooked to a daily cron event.
+	 */
+	public static function cleanup_stale_tmp_files() {
+		$dir = self::tmp_dir();
+		foreach ( glob( $dir . '*.part' ) as $path ) {
+			if ( filemtime( $path ) < time() - self::SESSION_TTL ) {
+				wp_delete_file( $path );
+			}
+		}
 	}
 
 	/**

@@ -57,6 +57,10 @@ een waarschuwing en een interactieve uitsnede-tool:
   wanneer een liggende foto op een staand formaat (of omgekeerd) moet
   passen.
 
+Ook wanneer alles al perfect past, kan de klant via de knop "Uitsnede zelf
+aanpassen" de tool altijd zelf openen om de compositie naar wens bij te
+stellen.
+
 De uiteindelijke uitsnede (positie, grootte én rotatiehoek) wordt
 opgeslagen bij de bestelling en is zichtbaar op het bestellingsscherm in
 wp-admin, naast de downloadlink naar de originele foto.
@@ -79,6 +83,17 @@ Dit gebruikt de bestaande WooCommerce e-mailinstellingen (WooCommerce →
 Instellingen → E-mails) voor afzender, huisstijl en het aan/uit zetten van
 losse mails — deze plugin voegt enkel de foto-bijlage en het gegarandeerde
 order@bunker.gallery-adres toe.
+
+## Upload van grote foto's
+
+Foto's worden in kleine stukjes (chunks van 2 MB) naar de server gestuurd
+in plaats van in één keer. Zo loopt een upload niet vast op de
+`upload_max_filesize`/`post_max_size`-limiet van de hosting (een
+serverinstelling die vanuit de plugin niet kan worden aangepast) — dit
+loste een fout op waarbij foto's groter dan enkele MB werden geweigerd.
+Er is geen configuratie nodig; dit werkt automatisch, tot de ingestelde
+maximum bestandsgrootte (standaard 200 MB, aan te passen via het
+`pps_max_upload_bytes`-filter).
 
 ## Prijsberekening
 

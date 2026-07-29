@@ -52,6 +52,7 @@ class PPS_Plugin {
 	private function hooks() {
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_show_woocommerce_notice' ) );
+		add_action( 'pps_cleanup_tmp_uploads', array( 'PPS_Image', 'cleanup_stale_tmp_files' ) );
 	}
 
 	public function load_textdomain() {

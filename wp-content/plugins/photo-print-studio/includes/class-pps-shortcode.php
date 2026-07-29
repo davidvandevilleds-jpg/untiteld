@@ -98,6 +98,7 @@ class PPS_Shortcode {
 			'cropTitle'         => __( 'Pas uw uitsnede aan', 'photo-print-studio' ),
 			'cropBody'          => __( 'Uw foto heeft een andere verhouding dan het gekozen formaat. Verschuif, zoom of draai om te bepalen wat er wordt afgedrukt.', 'photo-print-studio' ),
 			'rotate'            => __( '90° draaien', 'photo-print-studio' ),
+			'adjustCrop'        => __( 'Uitsnede zelf aanpassen', 'photo-print-studio' ),
 			'customSize'        => __( 'Aangepast formaat', 'photo-print-studio' ),
 			'widthLabel'        => __( 'Breedte (cm)', 'photo-print-studio' ),
 			'heightLabel'       => __( 'Hoogte (cm)', 'photo-print-studio' ),

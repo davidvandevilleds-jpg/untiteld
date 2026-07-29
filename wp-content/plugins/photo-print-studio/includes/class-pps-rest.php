@@ -338,8 +338,10 @@ class PPS_Rest {
 	}
 
 	/**
-	 * POST /add-to-cart -- validates the full selection, prices it, and (if
-	 * WooCommerce is active) adds it to the customer's cart.
+	 * POST /add-to-cart -- validates the shared configuration (format,
+	 * paper, mount, finish) and every photo in "items", prices it once, and
+	 * (if WooCommerce is active) adds one cart line per photo, each with
+	 * its own quantity.
 	 *
 	 * @param WP_REST_Request $request
 	 * @return WP_REST_Response|WP_Error
@@ -349,9 +351,9 @@ class PPS_Rest {
 			return new WP_Error( 'pps_no_woocommerce', __( 'WooCommerce is niet actief; bestellen is nog niet mogelijk.', 'photo-print-studio' ), array( 'status' => 503 ) );
 		}
 
-		$attachment_id = absint( $request->get_param( 'attachment_id' ) );
-		if ( ! $attachment_id || ! PPS_Image::is_customer_upload( $attachment_id ) ) {
-			return new WP_Error( 'pps_invalid_photo', __( 'Ongeldige foto.', 'photo-print-studio' ), array( 'status' => 400 ) );
+		$items = $request->get_param( 'items' );
+		if ( ! is_array( $items ) || empty( $items ) ) {
+			return new WP_Error( 'pps_no_items', __( 'Geen foto\'s om te bestellen.', 'photo-print-studio' ), array( 'status' => 400 ) );
 		}
 
 		$pricing_args = array(
@@ -369,24 +371,42 @@ class PPS_Rest {
 			return $pricing;
 		}
 
-		$crop = $request->get_param( 'crop' );
-		$crop = is_array( $crop ) ? array_map( 'floatval', $crop ) : array();
+		// Validate every photo before adding anything to the cart, so a bad
+		// item in the batch doesn't leave a partial order behind.
+		$validated = array();
+		foreach ( $items as $item ) {
+			$attachment_id = isset( $item['attachment_id'] ) ? absint( $item['attachment_id'] ) : 0;
+			if ( ! $attachment_id || ! PPS_Image::is_customer_upload( $attachment_id ) ) {
+				return new WP_Error( 'pps_invalid_photo', __( 'Een van de foto\'s is ongeldig. Probeer opnieuw te uploaden.', 'photo-print-studio' ), array( 'status' => 400 ) );
+			}
 
-		$cart_item_data = array(
-			'pps_data' => array_merge(
-				$pricing,
-				array(
-					'attachment_id' => $attachment_id,
-					'crop'          => $crop,
-				)
-			),
-			'unique_key' => md5( wp_json_encode( $pricing ) . $attachment_id . microtime() ),
-		);
+			$crop     = isset( $item['crop'] ) && is_array( $item['crop'] ) ? array_map( 'floatval', $item['crop'] ) : array();
+			$quantity = isset( $item['quantity'] ) ? max( 1, absint( $item['quantity'] ) ) : 1;
 
-		$result = PPS_WooCommerce::add_to_cart( $cart_item_data, $pricing['total'] );
-		if ( is_wp_error( $result ) ) {
-			$result->add_data( array( 'status' => 400 ) );
-			return $result;
+			$validated[] = array(
+				'attachment_id' => $attachment_id,
+				'crop'          => $crop,
+				'quantity'      => $quantity,
+			);
+		}
+
+		foreach ( $validated as $entry ) {
+			$cart_item_data = array(
+				'pps_data'   => array_merge(
+					$pricing,
+					array(
+						'attachment_id' => $entry['attachment_id'],
+						'crop'          => $entry['crop'],
+					)
+				),
+				'unique_key' => md5( wp_json_encode( $pricing ) . $entry['attachment_id'] . microtime() ),
+			);
+
+			$result = PPS_WooCommerce::add_to_cart( $cart_item_data, $pricing['total'], $entry['quantity'] );
+			if ( is_wp_error( $result ) ) {
+				$result->add_data( array( 'status' => 400 ) );
+				return $result;
+			}
 		}
 
 		return rest_ensure_response(

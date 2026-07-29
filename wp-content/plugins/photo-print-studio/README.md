@@ -1,11 +1,12 @@
 # Photo Print Studio
 
 WordPress-plugin met een stapsgewijze bestelwizard voor foto's op maat laten
-printen: uploaden, formaat/DPI-controle, een standaardformaat of een zelf
-ingegeven aangepast formaat kiezen, indien nodig bijsnijden en 90° draaien
-in een interactieve crop-tool, papierkeuze (Hahnemühle Digital FineArt
-Collection), montage op Dibond met afwerkingen, en afronden via
-WooCommerce.
+printen: tot 10 foto's tegelijk uploaden, formaat/DPI-controle, een
+standaardformaat of een zelf ingegeven aangepast formaat kiezen (geldt voor
+de hele set), indien nodig per foto bijsnijden en 90° draaien in een
+interactieve crop-tool, papierkeuze (Hahnemühle Digital FineArt Collection),
+montage op Dibond met afwerkingen, aantal exemplaren per foto kiezen, en
+afronden via WooCommerce.
 
 ## Installatie
 
@@ -44,12 +45,24 @@ Globale instellingen (minimale DPI, maximale afmetingen voor een aangepast
 formaat, behandelingskost, e-mailadres voor bestelmeldingen) staan onder
 **Print Studio → Instellingen**.
 
+## Meerdere foto's in één bestelling
+
+Een klant kan tot 10 foto's uploaden in stap 1 (thumbnails met een
+verwijderknop verschijnen onderaan). Formaat, papier, montage en afwerking
+worden **één keer** gekozen en gelden voor de hele set; per foto kies je
+enkel het **aantal exemplaren**. In het overzicht (laatste stap) ziet de
+klant een regel per foto (aantal × prijs per stuk) plus het totaal. Bij het
+afronden van de bestelling komt elke foto als aparte regel in de
+WooCommerce-bestelling terecht, met haar eigen aantal en eigen crop/foto.
+
 ## Crop-tool
 
-Zodra de klant een formaat kiest (standaard of zelf ingegeven) waarvan de
-verhouding niet overeenkomt met de foto, of waarbij de effectieve
-resolutie onder de ingestelde minimale DPI zakt, verschijnt automatisch
-een waarschuwing en een interactieve uitsnede-tool:
+Omdat elke foto zijn eigen resolutie en beeldverhouding heeft, wordt de
+DPI/verhouding-controle per foto uitgevoerd, ook al is het gekozen formaat
+voor iedereen hetzelfde. Zodra een foto niet overeenkomt met het gekozen
+formaat, of waarbij de effectieve resolutie onder de ingestelde minimale
+DPI zakt, verschijnt bij die foto automatisch een waarschuwing en een knop
+om de interactieve uitsnede-tool te openen:
 
 - **Verschuiven**: sleep de foto binnen het kader.
 - **Zoomen**: schuifregelaar om in/uit te zoomen op de uitsnede.
@@ -57,11 +70,12 @@ een waarschuwing en een interactieve uitsnede-tool:
   wanneer een liggende foto op een staand formaat (of omgekeerd) moet
   passen.
 
-Ook wanneer alles al perfect past, kan de klant via de knop "Uitsnede zelf
-aanpassen" de tool altijd zelf openen om de compositie naar wens bij te
-stellen.
+Ook wanneer een foto al perfect past, kan de klant via de knop "Uitsnede
+zelf aanpassen" bij die foto de tool altijd zelf openen om de compositie
+naar wens bij te stellen. Er is telkens maar één uitsnede-editor
+tegelijk open.
 
-De uiteindelijke uitsnede (positie, grootte én rotatiehoek) wordt
+De uiteindelijke uitsnede (positie, grootte én rotatiehoek) wordt per foto
 opgeslagen bij de bestelling en is zichtbaar op het bestellingsscherm in
 wp-admin, naast de downloadlink naar de originele foto.
 
@@ -98,11 +112,17 @@ maximum bestandsgrootte (standaard 200 MB, aan te passen via het
 ## Prijsberekening
 
 ```
-totaal = (breedte_m × hoogte_m) × (papier €/m² + montage €/m²)
-       + afwerking (€/m² × oppervlakte + vaste prijs, indien van toepassing)
-       + vaste toeslag van het gekozen formaat (optioneel)
-       + vaste behandelingskost (instellingen)
+prijs per stuk = (breedte_m × hoogte_m) × (papier €/m² + montage €/m²)
+                + afwerking (€/m² × oppervlakte + vaste prijs, indien van toepassing)
+                + vaste toeslag van het gekozen formaat (optioneel)
+
+bestelling totaal = Σ (prijs per stuk × aantal exemplaren, per foto)
+                   + vaste behandelingskost (instellingen, éénmalig per bestelling)
 ```
+
+De behandelingskost wordt precies één keer per bestelling aangerekend (als
+WooCommerce-"kost" op het winkelmandje), ongeacht hoeveel foto's of
+exemplaren er besteld worden.
 
 ## Stijl
 
@@ -118,8 +138,9 @@ www.bunker.gallery.
 - REST-routes onder `pps/v1` verzorgen upload, DPI-controle, prijsopvraag
   en "toevoegen aan winkelmand".
 - Eén verborgen WooCommerce-product ("Foto print op maat") vertegenwoordigt
-  elke bestelling in de winkelmand; de effectieve prijs en alle keuzes
-  (formaat, papier, montage, afwerking, crop, originele foto) worden per
-  winkelmand-item/bestellingsregel bijgehouden. Op het bestellingsscherm in
-  wp-admin verschijnt een downloadlink naar de originele, hoge-resolutie
-  foto.
+  elke foto in de winkelmand (één regel per foto, met haar eigen aantal);
+  de effectieve prijs per stuk en alle keuzes (formaat, papier, montage,
+  afwerking, crop, originele foto) worden per winkelmand-item/
+  bestellingsregel bijgehouden. Op het bestellingsscherm in wp-admin
+  verschijnt per foto een downloadlink naar de originele, hoge-resolutie
+  versie plus de toegepaste uitsnede/rotatie.

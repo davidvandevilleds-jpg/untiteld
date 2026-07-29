@@ -153,7 +153,12 @@ class PPS_Pricing {
 		$mount_cost  = round( $area * $mount_price_per_m2, 2 );
 		$finish_cost = round( ( $area * $finish_price_per_m2 ) + $finish_price_fixed, 2 );
 
-		$total = round( $paper_cost + $mount_cost + $finish_cost + $format_surcharge + $handling_fee, 2 );
+		// This is the price for one print in this configuration. The
+		// handling fee is charged once per order (not per print / not
+		// multiplied by quantity), so it's applied separately as a
+		// WooCommerce cart fee -- see PPS_WooCommerce -- and only reported
+		// here for display.
+		$total = round( $paper_cost + $mount_cost + $finish_cost + $format_surcharge, 2 );
 
 		return array(
 			'width_cm'             => floatval( $args['width_cm'] ),

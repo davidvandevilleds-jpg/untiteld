@@ -36,6 +36,7 @@ class PPS_WooCommerce {
 	private function __construct() {
 		add_filter( 'woocommerce_get_item_data', array( __CLASS__, 'display_cart_item_data' ), 10, 2 );
 		add_action( 'woocommerce_before_calculate_totals', array( __CLASS__, 'apply_cart_item_price' ) );
+		add_action( 'woocommerce_cart_calculate_fees', array( __CLASS__, 'apply_handling_fee' ) );
 		add_action( 'woocommerce_checkout_create_order_line_item', array( __CLASS__, 'persist_order_item_meta' ), 10, 4 );
 		add_action( 'woocommerce_after_order_itemmeta', array( __CLASS__, 'render_admin_photo_link' ), 10, 3 );
 		add_filter( 'woocommerce_email_recipient_new_order', array( __CLASS__, 'ensure_order_notification_recipient' ), 10, 3 );
@@ -61,10 +62,11 @@ class PPS_WooCommerce {
 	 * @param array $cart_item_data Must contain a 'pps_data' array and a
 	 *                              unique 'unique_key' so identical-looking
 	 *                              prints don't merge into one line.
-	 * @param float $price          Computed total price for this print.
+	 * @param float $price          Computed per-print (unit) price.
+	 * @param int   $quantity       Number of copies of this print (default 1).
 	 * @return string|WP_Error Cart item key on success.
 	 */
-	public static function add_to_cart( $cart_item_data, $price ) {
+	public static function add_to_cart( $cart_item_data, $price, $quantity = 1 ) {
 		$product_id = self::get_template_product_id();
 		if ( is_wp_error( $product_id ) ) {
 			return $product_id;
@@ -79,7 +81,7 @@ class PPS_WooCommerce {
 			wc_load_cart();
 		}
 
-		$cart_item_key = WC()->cart->add_to_cart( $product_id, 1, 0, array(), $cart_item_data );
+		$cart_item_key = WC()->cart->add_to_cart( $product_id, max( 1, absint( $quantity ) ), 0, array(), $cart_item_data );
 
 		if ( ! $cart_item_key ) {
 			return new WP_Error( 'pps_cart_error', __( 'Kon dit product niet aan de winkelmand toevoegen.', 'photo-print-studio' ) );
@@ -90,7 +92,8 @@ class PPS_WooCommerce {
 
 	/**
 	 * Overrides the template product's price with the per-item computed
-	 * price for every custom-print cart line.
+	 * price for every custom-print cart line. WooCommerce multiplies this
+	 * unit price by the line's quantity automatically.
 	 *
 	 * @param WC_Cart $cart
 	 */
@@ -103,6 +106,37 @@ class PPS_WooCommerce {
 			if ( ! empty( $cart_item[ self::CART_ITEM_KEY ]['total'] ) ) {
 				$cart_item['data']->set_price( floatval( $cart_item[ self::CART_ITEM_KEY ]['total'] ) );
 			}
+		}
+	}
+
+	/**
+	 * Adds the configured handling fee once per order (not per print, not
+	 * multiplied by quantity) when the cart contains at least one custom
+	 * print. Runs on every fee recalculation, which is the standard,
+	 * supported way to add a single cart-level fee in WooCommerce.
+	 *
+	 * @param WC_Cart $cart
+	 */
+	public static function apply_handling_fee( $cart ) {
+		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+			return;
+		}
+
+		$handling_fee = (float) PPS_Settings::get_value( 'handling_fee' );
+		if ( $handling_fee <= 0 ) {
+			return;
+		}
+
+		$has_print = false;
+		foreach ( $cart->get_cart() as $cart_item ) {
+			if ( ! empty( $cart_item[ self::CART_ITEM_KEY ] ) ) {
+				$has_print = true;
+				break;
+			}
+		}
+
+		if ( $has_print ) {
+			$cart->add_fee( __( 'Behandelingskost', 'photo-print-studio' ), $handling_fee, false );
 		}
 	}
 

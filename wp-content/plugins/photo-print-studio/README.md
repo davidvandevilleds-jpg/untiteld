@@ -85,9 +85,15 @@ zelf aanpassen" bij die foto de tool altijd zelf openen om de compositie
 naar wens bij te stellen. Er is telkens maar één uitsnede-editor
 tegelijk open.
 
-De uiteindelijke uitsnede (positie, grootte én rotatiehoek) wordt per foto
-opgeslagen bij de bestelling en is zichtbaar op het bestellingsscherm in
-wp-admin, naast de downloadlink naar de originele foto.
+Bij het afronden van de bestelling wordt de uitsnede/rotatie ook echt
+**toegepast**: er wordt automatisch een print-klaar bestand gegenereerd
+(origineel + rotatie + uitsnede) en dat bestand — niet enkel de
+coördinaten — is wat je terugvindt op het bestellingsscherm in wp-admin
+en wat als bijlage in de nieuwe-bestelling-mail terechtkomt (zie
+hieronder). De originele, onbewerkte foto blijft daarnaast ook gewoon
+downloadbaar. Als het genereren van het uitsnede-bestand om een of andere
+reden niet lukt (bv. een TIFF-bestand op een server zonder Imagick), valt
+alles automatisch terug op de originele foto.
 
 ## Fotominiatuur bij het product
 
@@ -101,10 +107,11 @@ bestelmails en onder Mijn account → Bestellingen.
 ## E-mails bij bestelling
 
 - **Wij (order@bunker.gallery, aanpasbaar onder Instellingen)** ontvangen
-  WooCommerce's "Nieuwe bestelling"-mail, aangevuld met de originele,
-  hoge-resolutie foto('s) als bijlage plus alle keuzes (formaat, papier,
-  montage, afwerking) in het overzicht. Bestanden groter dan 15 MB worden
-  niet bijgevoegd (mailservers wijzen grote bijlagen vaak af) — die foto
+  WooCommerce's "Nieuwe bestelling"-mail, aangevuld met het print-klare
+  bestand per foto (dus al gedraaid/bijgesneden zoals de klant het
+  instelde) als bijlage, plus alle keuzes (formaat, papier, montage,
+  afwerking) in het overzicht. Bestanden groter dan 15 MB worden niet
+  bijgevoegd (mailservers wijzen grote bijlagen vaak af) — dat bestand
   blijft wel altijd rechtstreeks downloadbaar via de bestelling in
   wp-admin.
 - **De klant** ontvangt automatisch WooCommerce's eigen
@@ -159,6 +166,18 @@ De wizard-CSS (`assets/css/wizard.css`) gebruikt CSS-variabelen bovenaan
 (`--pps-color-*`, `--pps-font-*`) zodat de kleuren en typografie in één
 plek aangepast kunnen worden om exact aan te sluiten bij het thema van
 www.bunker.gallery.
+
+## Problemen oplossen: "ik zie mijn wijziging niet"
+
+Wizard-updates (JS/CSS) zouden altijd automatisch moeten doorkomen — het
+versienummer van die bestanden wordt afgeleid van hun laatste
+wijzigingstijdstip, niet van een handmatig bij te houden nummer. Twijfel
+je toch of de site de nieuwste versie laadt? Open de pagina met de
+bestelwizard, open de browserconsole (F12) en herlaad: er verschijnt een
+regel `Photo Print Studio wizard build: <tijdstip>`. Blijft die waarde
+gelijk na een nieuwe wijziging, dan wordt er ergens gecachet (cache-plugin,
+CDN, of de browser zelf) — leeg die cache en herlaad (evt. met
+Ctrl/Cmd+Shift+R).
 
 ## Technisch
 

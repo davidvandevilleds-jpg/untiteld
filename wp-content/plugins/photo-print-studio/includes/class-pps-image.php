@@ -317,4 +317,102 @@ class PPS_Image {
 			'height' => (int) $height,
 		);
 	}
+
+	/**
+	 * @return int Above this source-file size, crop-file generation is
+	 *             skipped (falls back to the original) to avoid a very
+	 *             large rotate/crop operation blocking checkout.
+	 */
+	public static function max_crop_source_bytes() {
+		return (int) apply_filters( 'pps_max_crop_source_bytes', 80 * MB_IN_BYTES );
+	}
+
+	/**
+	 * Produces the actual print-ready file for one ordered photo: the
+	 * original, rotated and cropped exactly the way the customer set it up
+	 * in the wizard, saved as a new Media Library attachment. Used so the
+	 * shop and the "new order" email receive the file that should actually
+	 * be printed, not just the untouched original plus coordinates.
+	 *
+	 * @param int   $original_attachment_id
+	 * @param array $crop { @type float $sx, $sy, $sw, $sh, $rotation }
+	 * @return array|WP_Error { @type int $attachment_id, @type string $url }
+	 */
+	public static function generate_crop_attachment( $original_attachment_id, $crop ) {
+		if ( empty( $crop ) || ! isset( $crop['sw'], $crop['sh'], $crop['sx'], $crop['sy'] ) || ! $crop['sw'] || ! $crop['sh'] ) {
+			return new WP_Error( 'pps_invalid_crop', __( 'Geen geldige uitsnede-gegevens.', 'photo-print-studio' ) );
+		}
+
+		$original_path = get_attached_file( $original_attachment_id );
+		if ( ! $original_path || ! file_exists( $original_path ) ) {
+			return new WP_Error( 'pps_missing_file', __( 'Origineel bestand niet gevonden.', 'photo-print-studio' ) );
+		}
+
+		if ( filesize( $original_path ) > self::max_crop_source_bytes() ) {
+			return new WP_Error( 'pps_source_too_large', __( 'Bestand te groot om automatisch uit te snijden.', 'photo-print-studio' ) );
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		$editor = wp_get_image_editor( $original_path );
+		if ( is_wp_error( $editor ) ) {
+			return $editor;
+		}
+
+		// The wizard's rotation is clockwise (matching <canvas> rotate()),
+		// while WP_Image_Editor::rotate() turns counter-clockwise -- so the
+		// two need converting between one another.
+		$rotation = ! empty( $crop['rotation'] ) ? ( (int) round( $crop['rotation'] ) ) % 360 : 0;
+		if ( $rotation ) {
+			$rotated = $editor->rotate( ( 360 - $rotation ) % 360 );
+			if ( is_wp_error( $rotated ) ) {
+				return $rotated;
+			}
+		}
+
+		$cropped = $editor->crop(
+			(int) round( $crop['sx'] ),
+			(int) round( $crop['sy'] ),
+			(int) round( $crop['sw'] ),
+			(int) round( $crop['sh'] ),
+			null,
+			null,
+			true // Absolute pixel coordinates (not percentages).
+		);
+		if ( is_wp_error( $cropped ) ) {
+			return $cropped;
+		}
+
+		$editor->set_quality( 95 );
+
+		$upload_dir = wp_upload_dir();
+		$crop_dir   = trailingslashit( $upload_dir['basedir'] ) . 'pps-uploads/crops/';
+		wp_mkdir_p( $crop_dir );
+
+		$filename = wp_unique_filename( $crop_dir, 'print-crop-' . $original_attachment_id . '.jpg' );
+		$saved    = $editor->save( $crop_dir . $filename, 'image/jpeg' );
+		if ( is_wp_error( $saved ) ) {
+			return $saved;
+		}
+
+		$attachment = array(
+			'post_mime_type' => 'image/jpeg',
+			'post_title'     => 'print-crop-' . $original_attachment_id,
+			'post_content'   => '',
+			'post_status'    => 'private',
+		);
+
+		$attachment_id = wp_insert_attachment( $attachment, $saved['path'] );
+		if ( is_wp_error( $attachment_id ) ) {
+			return $attachment_id;
+		}
+
+		$metadata = wp_generate_attachment_metadata( $attachment_id, $saved['path'] );
+		wp_update_attachment_metadata( $attachment_id, $metadata );
+
+		return array(
+			'attachment_id' => $attachment_id,
+			'url'           => wp_get_attachment_url( $attachment_id ),
+		);
+	}
 }

@@ -263,12 +263,27 @@ class PPS_WooCommerce {
 		$item->add_meta_data( '_pps_attachment_id', $data['attachment_id'], true );
 		$item->add_meta_data( '_pps_crop', wp_json_encode( isset( $data['crop'] ) ? $data['crop'] : array() ), true );
 		$item->add_meta_data( '_pps_breakdown', wp_json_encode( $data ), true );
+
+		// Bakes the customer's crop/rotation into an actual print-ready
+		// file, so the shop (and the "new order" email) get the picture
+		// that should actually be printed rather than just the untouched
+		// original plus coordinates. Falls back silently to the original
+		// (see attach_order_photos() / render_admin_photo_link()) if this
+		// can't be generated, e.g. a TIFF on a host without Imagick.
+		$crop_result = PPS_Image::generate_crop_attachment(
+			$data['attachment_id'],
+			isset( $data['crop'] ) ? $data['crop'] : array()
+		);
+		if ( ! is_wp_error( $crop_result ) ) {
+			$item->add_meta_data( '_pps_crop_attachment_id', $crop_result['attachment_id'], true );
+		}
 	}
 
 	/**
-	 * In wp-admin's order edit screen, adds a direct download link to the
-	 * customer's original uploaded photo plus the crop info, right under
-	 * that line item's meta table.
+	 * In wp-admin's order edit screen, adds direct download links to the
+	 * customer's original uploaded photo and the generated print-ready
+	 * crop (if any), plus the crop info, right under that line item's meta
+	 * table.
 	 *
 	 * @param int                    $item_id
 	 * @param WC_Order_Item_Product  $item
@@ -280,21 +295,30 @@ class PPS_WooCommerce {
 		}
 
 		$attachment_id = $item->get_meta( '_pps_attachment_id', true );
-		if ( ! $attachment_id ) {
-			return;
+		if ( $attachment_id ) {
+			$url = wp_get_attachment_url( $attachment_id );
+			if ( $url ) {
+				printf(
+					'<p class="pps-admin-photo-link"><strong>%s</strong> <a href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
+					esc_html__( 'Originele foto:', 'photo-print-studio' ),
+					esc_url( $url ),
+					esc_html__( 'Downloaden', 'photo-print-studio' )
+				);
+			}
 		}
 
-		$url = wp_get_attachment_url( $attachment_id );
-		if ( ! $url ) {
-			return;
+		$crop_attachment_id = $item->get_meta( '_pps_crop_attachment_id', true );
+		if ( $crop_attachment_id ) {
+			$crop_url = wp_get_attachment_url( $crop_attachment_id );
+			if ( $crop_url ) {
+				printf(
+					'<p class="pps-admin-photo-link"><strong>%s</strong> <a href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
+					esc_html__( 'Print-klare uitsnede:', 'photo-print-studio' ),
+					esc_url( $crop_url ),
+					esc_html__( 'Downloaden', 'photo-print-studio' )
+				);
+			}
 		}
-
-		printf(
-			'<p class="pps-admin-photo-link"><strong>%s</strong> <a href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
-			esc_html__( 'Originele foto:', 'photo-print-studio' ),
-			esc_url( $url ),
-			esc_html__( 'Downloaden', 'photo-print-studio' )
-		);
 
 		$crop = json_decode( (string) $item->get_meta( '_pps_crop', true ), true );
 		if ( empty( $crop ) || empty( $crop['sw'] ) ) {
@@ -350,13 +374,17 @@ class PPS_WooCommerce {
 	}
 
 	/**
-	 * Attaches every ordered photo's original, full-resolution file to the
-	 * admin "New order" email, so the print shop has everything (info +
-	 * photo) in one place without needing to log into wp-admin first.
+	 * Attaches every ordered photo's print-ready file (the original,
+	 * rotated and cropped exactly as the customer set it up) to the admin
+	 * "New order" email, so the print shop has everything (info + the
+	 * actual file to print) in one place without needing to log into
+	 * wp-admin first. Falls back to the untouched original if no crop file
+	 * was generated (e.g. a TIFF on a host without Imagick, or no crop was
+	 * needed).
 	 *
 	 * Large files (beyond pps_max_email_attachment_bytes, 15 MB by default)
 	 * are skipped to avoid mail servers rejecting oversized messages -- the
-	 * order screen in wp-admin always has a direct download link regardless.
+	 * order screen in wp-admin always has direct download links regardless.
 	 *
 	 * @param string[] $attachments
 	 * @param string   $email_id
@@ -375,7 +403,8 @@ class PPS_WooCommerce {
 				continue;
 			}
 
-			$attachment_id = $item->get_meta( '_pps_attachment_id', true );
+			$crop_attachment_id = $item->get_meta( '_pps_crop_attachment_id', true );
+			$attachment_id      = $crop_attachment_id ? $crop_attachment_id : $item->get_meta( '_pps_attachment_id', true );
 			if ( ! $attachment_id ) {
 				continue;
 			}

@@ -14,6 +14,52 @@ if ( ! defined( 'ABSPATH' ) ) {
 class PPS_Pricing {
 
 	/**
+	 * Plain-character currency symbol for display (wizard front-end and
+	 * admin catalogue columns). WooCommerce's own
+	 * get_woocommerce_currency_symbol()/wc_price() return the HTML entity
+	 * form of the symbol (e.g. "&euro;") which is only safe inside raw HTML
+	 * output -- it breaks when placed in a JS string (element.textContent
+	 * doesn't decode entities) or re-escaped via esc_html(). We build the
+	 * common symbols ourselves as plain UTF-8 characters to sidestep that
+	 * entirely, falling back to a decoded WooCommerce value for currencies
+	 * outside this shortlist.
+	 *
+	 * @return string
+	 */
+	public static function currency_symbol() {
+		if ( ! function_exists( 'get_woocommerce_currency' ) ) {
+			return '€';
+		}
+
+		$common = array(
+			'EUR' => '€',
+			'USD' => '$',
+			'GBP' => '£',
+			'CHF' => 'CHF',
+		);
+
+		$code = get_woocommerce_currency();
+		if ( isset( $common[ $code ] ) ) {
+			return $common[ $code ];
+		}
+
+		return function_exists( 'get_woocommerce_currency_symbol' )
+			? html_entity_decode( get_woocommerce_currency_symbol( $code ), ENT_QUOTES, 'UTF-8' )
+			: '€';
+	}
+
+	/**
+	 * Formats an amount with the plain-character currency symbol, in the
+	 * "1.234,56 €"-style used throughout the wizard and admin screens.
+	 *
+	 * @param float $amount
+	 * @return string
+	 */
+	public static function format_price( $amount ) {
+		return self::currency_symbol() . ' ' . number_format( (float) $amount, 2, ',', '.' );
+	}
+
+	/**
 	 * Validate requested print dimensions against the configured bounds.
 	 *
 	 * @param float $width_cm

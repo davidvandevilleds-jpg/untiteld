@@ -71,6 +71,10 @@ class PPS_Shortcode {
 				'nonce'            => wp_create_nonce( 'wp_rest' ),
 				'hasWooCommerce'   => class_exists( 'WooCommerce' ),
 				'i18n'             => $this->i18n_strings(),
+				// Logged to the browser console so a cached/stale wizard.js
+				// (e.g. behind a page cache or CDN) is immediately visible --
+				// compare against the file's actual last-modified time.
+				'buildVersion'     => self::asset_version( 'assets/js/wizard.js' ),
 			)
 		);
 	}

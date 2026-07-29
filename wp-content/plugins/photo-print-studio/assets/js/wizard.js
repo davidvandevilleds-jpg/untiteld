@@ -1300,6 +1300,7 @@
 				if ( ! mount.requires_finish ) {
 					state.finishId = 0;
 				}
+				invalidateAllPricing();
 				render();
 			} );
 			grid.appendChild( card );
@@ -1339,6 +1340,7 @@
 			} );
 			card.addEventListener( 'click', function () {
 				state.paperId = paper.id;
+				invalidateAllPricing();
 				render();
 			} );
 			grid.appendChild( card );
@@ -1385,6 +1387,7 @@
 			} );
 			card.addEventListener( 'click', function () {
 				state.finishId = finish.id;
+				invalidateAllPricing();
 				render();
 			} );
 			grid.appendChild( card );
@@ -1399,6 +1402,19 @@
 	/* ------------------------------------------------------------------ */
 	/* Step 7: summary                                                     */
 	/* ------------------------------------------------------------------ */
+
+	/**
+	 * Clears every photo's cached price so the summary step re-fetches
+	 * instead of showing stale totals. Needed whenever paper/mount/finish
+	 * change, since those are shared across all photos but each photo
+	 * caches its own /price result (format-related fields are invalidated
+	 * separately, by resetPhotoFormatState()).
+	 */
+	function invalidateAllPricing() {
+		state.photos.forEach( function ( photo ) {
+			photo.pricing = null;
+		} );
+	}
 
 	/**
 	 * Prices vary per photo now (each can have its own format), so this
@@ -1596,6 +1612,12 @@
 			return;
 		}
 		i18n = PPS_CONFIG.i18n || {};
+		// If a change to this file doesn't seem to appear on the site, check
+		// this against the actual file's last-modified time -- a mismatch
+		// means a cache (browser, page cache, or CDN) is serving an old copy.
+		if ( window.console && console.log ) {
+			console.log( 'Photo Print Studio wizard build: ' + PPS_CONFIG.buildVersion );
+		}
 		render();
 	} );
 } )();

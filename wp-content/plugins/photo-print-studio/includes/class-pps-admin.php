@@ -283,21 +283,16 @@ class PPS_Admin {
 
 if ( ! function_exists( 'pps_format_price' ) ) {
 	/**
-	 * Format a number as a currency string using WooCommerce's formatter
-	 * when available, otherwise a plain 2-decimal fallback so the admin
-	 * screens still work before WooCommerce is installed.
+	 * Format a number as a currency string for the admin list columns.
+	 * Deliberately doesn't use wc_price() -- it embeds the currency symbol
+	 * as an HTML entity (e.g. "&euro;"), which shows up as literal
+	 * "&euro;" text once re-escaped via esc_html(). PPS_Pricing builds the
+	 * symbol as a plain character instead.
 	 *
 	 * @param float $amount
 	 * @return string
 	 */
 	function pps_format_price( $amount ) {
-		if ( function_exists( 'wc_price' ) ) {
-			// wc_price() renders the currency symbol as an HTML entity
-			// (e.g. "&euro;"); decode it to the actual character so it
-			// doesn't show up as literal "&euro;" text once this string
-			// goes through esc_html() in the admin list columns.
-			return html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' );
-		}
-		return number_format( (float) $amount, 2 ) . ' €';
+		return PPS_Pricing::format_price( $amount );
 	}
 }

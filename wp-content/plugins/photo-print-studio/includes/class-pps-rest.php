@@ -260,13 +260,7 @@ class PPS_Rest {
 				'mounts'   => $mounts,
 				'finishes' => $finishes,
 				'settings' => $settings,
-				// get_woocommerce_currency_symbol() returns an HTML entity
-				// (e.g. "&euro;"); decode it since this value is inserted
-				// as plain text (element.textContent) in the wizard, which
-				// doesn't interpret HTML entities.
-				'currency' => function_exists( 'get_woocommerce_currency_symbol' )
-					? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
-					: '€',
+				'currency' => PPS_Pricing::currency_symbol(),
 			)
 		);
 	}

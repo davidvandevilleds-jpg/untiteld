@@ -3,7 +3,7 @@
  * Plugin Name:       Photo Print Studio
  * Plugin URI:        https://www.bunker.gallery
  * Description:       Stapsgewijze bestelwizard voor fotoprints: upload, formaat/DPI-controle, papierkeuze (Hahnemühle Digital FineArt Collection), montage op Dibond met afwerkingsopties, en bestellen via WooCommerce.
- * Version:           1.2.0
+ * Version:           1.3.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Bunker Gallery
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
 
-define( 'PPS_VERSION', '1.2.0' );
+define( 'PPS_VERSION', '1.3.0' );
 define( 'PPS_PLUGIN_FILE', __FILE__ );
 define( 'PPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

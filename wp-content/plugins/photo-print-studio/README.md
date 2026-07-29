@@ -64,8 +64,14 @@ formaat, of waarbij de effectieve resolutie onder de ingestelde minimale
 DPI zakt, verschijnt bij die foto automatisch een waarschuwing en een knop
 om de interactieve uitsnede-tool te openen:
 
-- **Verschuiven**: sleep de foto binnen het kader.
-- **Zoomen**: schuifregelaar om in/uit te zoomen op de uitsnede.
+De klant ziet steeds de volledige foto; daarover ligt een kader in de
+verhouding van het gekozen formaat (het gedeelte buiten het kader is
+gedimd):
+
+- **Verschuiven**: sleep het kader over de foto om te kiezen wat wordt
+  afgedrukt.
+- **Zoomen**: schuifregelaar om het kader kleiner (verder ingezoomd) of
+  groter te maken.
 - **90° draaien**: knop om de foto in stappen van 90° te roteren, handig
   wanneer een liggende foto op een staand formaat (of omgekeerd) moet
   passen.

@@ -104,7 +104,7 @@ class PPS_Shortcode {
 			'dpiWarningTitle'   => __( 'Let op: beperkte beeldkwaliteit', 'photo-print-studio' ),
 			'dpiWarningBody'    => __( 'Op dit formaat wordt uw foto uitgerekt. Bekijk het voorbeeld hieronder -- de afdruk kan er zachter of korreliger uitzien dan het origineel.', 'photo-print-studio' ),
 			'cropTitle'         => __( 'Pas uw uitsnede aan', 'photo-print-studio' ),
-			'cropBody'          => __( 'Uw foto heeft een andere verhouding dan het gekozen formaat. Verschuif, zoom of draai om te bepalen wat er wordt afgedrukt.', 'photo-print-studio' ),
+			'cropBody'          => __( 'Sleep het kader over uw foto om te kiezen wat er wordt afgedrukt. Gebruik de schuifregelaar om in of uit te zoomen, of draai de foto 90°.', 'photo-print-studio' ),
 			'rotate'            => __( '90° draaien', 'photo-print-studio' ),
 			'adjustCrop'        => __( 'Uitsnede zelf aanpassen', 'photo-print-studio' ),
 			'customSize'        => __( 'Aangepast formaat', 'photo-print-studio' ),

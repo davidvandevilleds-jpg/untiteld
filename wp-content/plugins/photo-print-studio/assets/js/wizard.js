@@ -960,7 +960,10 @@
 		cropBox.className = 'pps-crop';
 
 		cropCanvas = document.createElement( 'canvas' );
-		var box = fitBox( state.widthCm / state.heightCm, 560, 480 );
+		var swapped = 90 === photo.rotation || 270 === photo.rotation;
+		var effW = swapped ? photo.imgHeight : photo.imgWidth;
+		var effH = swapped ? photo.imgWidth : photo.imgHeight;
+		var box = fitImageBox( effW, effH, 560, 480 );
 		cropCanvas.width = box.w;
 		cropCanvas.height = box.h;
 		cropCtx = cropCanvas.getContext( '2d' );
@@ -1006,12 +1009,17 @@
 		return section;
 	}
 
-	function fitBox( ratio, maxW, maxH ) {
+	/**
+	 * Largest box of the image's own aspect ratio that fits within
+	 * maxW x maxH -- the crop tool always shows the whole photo, so the
+	 * canvas is sized to contain it rather than to the target print ratio.
+	 */
+	function fitImageBox( imgW, imgH, maxW, maxH ) {
 		var w = maxW;
-		var h = w / ratio;
+		var h = ( imgH / imgW ) * w;
 		if ( h > maxH ) {
 			h = maxH;
-			w = h * ratio;
+			w = ( imgW / imgH ) * h;
 		}
 		return { w: Math.round( w ), h: Math.round( h ) };
 	}
@@ -1137,30 +1145,57 @@
 		photo.crop = { sw: sw, sh: sh, sx: sx, sy: sy, rotation: photo.rotation };
 	}
 
+	/**
+	 * Draws the whole photo (scaled to fit the canvas) with a movable frame
+	 * overlaid on top, in the requested format's aspect ratio -- dimmed
+	 * outside the frame so it's obvious what will and won't be printed.
+	 */
 	function drawCrop( photo ) {
 		if ( ! cropCtx || ! photo.crop ) {
 			return;
 		}
+
+		var scale = cropCanvas.width / rotatedWidth;
+
 		cropCtx.clearRect( 0, 0, cropCanvas.width, cropCanvas.height );
-		cropCtx.drawImage(
-			rotatedSource,
-			photo.crop.sx,
-			photo.crop.sy,
-			photo.crop.sw,
-			photo.crop.sh,
-			0,
-			0,
-			cropCanvas.width,
-			cropCanvas.height
-		);
+		cropCtx.drawImage( rotatedSource, 0, 0, rotatedWidth, rotatedHeight, 0, 0, cropCanvas.width, cropCanvas.height );
+
+		var frameX = photo.crop.sx * scale;
+		var frameY = photo.crop.sy * scale;
+		var frameW = photo.crop.sw * scale;
+		var frameH = photo.crop.sh * scale;
+
+		cropCtx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+		cropCtx.fillRect( 0, 0, cropCanvas.width, frameY ); // above the frame
+		cropCtx.fillRect( 0, frameY + frameH, cropCanvas.width, cropCanvas.height - ( frameY + frameH ) ); // below
+		cropCtx.fillRect( 0, frameY, frameX, frameH ); // left of the frame
+		cropCtx.fillRect( frameX + frameW, frameY, cropCanvas.width - ( frameX + frameW ), frameH ); // right
+
+		cropCtx.strokeStyle = '#ffffff';
+		cropCtx.lineWidth = 2;
+		cropCtx.strokeRect( frameX + 1, frameY + 1, frameW - 2, frameH - 2 );
 	}
 
+	/**
+	 * Lets the customer drag the frame around over the (static, fully
+	 * visible) photo to choose what falls inside it.
+	 */
 	function attachCropDrag( photo ) {
 		var box = cropCanvas.parentElement;
 		cropDrag = null;
 
 		box.addEventListener( 'pointerdown', function ( e ) {
-			cropDrag = { x: e.clientX, y: e.clientY, sx: photo.crop.sx, sy: photo.crop.sy };
+			var rect = cropCanvas.getBoundingClientRect();
+			cropDrag = {
+				x: e.clientX,
+				y: e.clientY,
+				sx: photo.crop.sx,
+				sy: photo.crop.sy,
+				// The canvas is scaled by CSS to fit its container, so
+				// pointer coordinates (in CSS pixels) need to be converted
+				// back to the canvas's own intrinsic pixel grid first.
+				cssToCanvas: cropCanvas.width / rect.width,
+			};
 			box.setPointerCapture( e.pointerId );
 		} );
 
@@ -1168,12 +1203,12 @@
 			if ( ! cropDrag ) {
 				return;
 			}
-			var factor = photo.crop.sw / cropCanvas.width;
-			var dx = ( e.clientX - cropDrag.x ) * factor;
-			var dy = ( e.clientY - cropDrag.y ) * factor;
+			var scale = cropCanvas.width / rotatedWidth;
+			var dxSource = ( ( e.clientX - cropDrag.x ) * cropDrag.cssToCanvas ) / scale;
+			var dySource = ( ( e.clientY - cropDrag.y ) * cropDrag.cssToCanvas ) / scale;
 
-			photo.crop.sx = clamp( cropDrag.sx - dx, 0, rotatedWidth - photo.crop.sw );
-			photo.crop.sy = clamp( cropDrag.sy - dy, 0, rotatedHeight - photo.crop.sh );
+			photo.crop.sx = clamp( cropDrag.sx + dxSource, 0, rotatedWidth - photo.crop.sw );
+			photo.crop.sy = clamp( cropDrag.sy + dySource, 0, rotatedHeight - photo.crop.sh );
 			drawCrop( photo );
 		} );
 

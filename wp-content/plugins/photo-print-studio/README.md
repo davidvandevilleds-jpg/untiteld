@@ -1,12 +1,13 @@
 # Photo Print Studio
 
 WordPress-plugin met een stapsgewijze bestelwizard voor foto's op maat laten
-printen: tot 10 foto's tegelijk uploaden, formaat/DPI-controle, een
-standaardformaat of een zelf ingegeven aangepast formaat kiezen (geldt voor
-de hele set), indien nodig per foto bijsnijden en 90° draaien in een
+printen: tot 10 foto's tegelijk uploaden, formaat/DPI-controle, voor elke
+foto afzonderlijk een standaardformaat of een zelf ingegeven aangepast
+formaat kiezen, indien nodig per foto bijsnijden en 90° draaien in een
 interactieve crop-tool, papierkeuze (Hahnemühle Digital FineArt Collection),
-montage op Dibond met afwerkingen, aantal exemplaren per foto kiezen, en
-afronden via WooCommerce.
+montage op Dibond met afwerkingen (deze twee gelden voor de hele
+bestelling), aantal exemplaren per foto kiezen, en afronden via
+WooCommerce.
 
 ## Installatie
 
@@ -48,21 +49,24 @@ formaat, behandelingskost, e-mailadres voor bestelmeldingen) staan onder
 ## Meerdere foto's in één bestelling
 
 Een klant kan tot 10 foto's uploaden in stap 1 (thumbnails met een
-verwijderknop verschijnen onderaan). Formaat, papier, montage en afwerking
-worden **één keer** gekozen en gelden voor de hele set; per foto kies je
-enkel het **aantal exemplaren**. In het overzicht (laatste stap) ziet de
-klant een regel per foto (aantal × prijs per stuk) plus het totaal. Bij het
-afronden van de bestelling komt elke foto als aparte regel in de
-WooCommerce-bestelling terecht, met haar eigen aantal en eigen crop/foto.
+verwijderknop verschijnen onderaan, telkens met een eigen **aantal
+exemplaren**-veld). In de formaat-stap kiest de klant vervolgens voor
+**elke foto afzonderlijk** een standaard- of aangepast formaat (foto's
+kunnen dus elk hun eigen grootte krijgen). Papier, montage en afwerking
+worden daarna **één keer** gekozen voor de hele bestelling. In het
+overzicht (laatste stap) ziet de klant een regel per foto (haar formaat,
+aantal × prijs per stuk) plus het totaal. Bij het afronden komt elke foto
+als aparte regel in de WooCommerce-bestelling terecht, met haar eigen
+formaat, aantal en crop/foto.
 
 ## Crop-tool
 
-Omdat elke foto zijn eigen resolutie en beeldverhouding heeft, wordt de
-DPI/verhouding-controle per foto uitgevoerd, ook al is het gekozen formaat
-voor iedereen hetzelfde. Zodra een foto niet overeenkomt met het gekozen
-formaat, of waarbij de effectieve resolutie onder de ingestelde minimale
-DPI zakt, verschijnt bij die foto automatisch een waarschuwing en een knop
-om de interactieve uitsnede-tool te openen:
+Omdat elke foto haar eigen resolutie, beeldverhouding én (nu) formaat
+heeft, wordt de DPI/verhouding-controle per foto uitgevoerd. Zodra een
+foto niet overeenkomt met het voor haar gekozen formaat, of waarbij de
+effectieve resolutie onder de ingestelde minimale DPI zakt, verschijnt bij
+die foto automatisch een waarschuwing en een knop om de interactieve
+uitsnede-tool te openen:
 
 De klant ziet steeds de volledige foto; daarover ligt een kader in de
 verhouding van het gekozen formaat (het gedeelte buiten het kader is

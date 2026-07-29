@@ -345,10 +345,10 @@ class PPS_Rest {
 	}
 
 	/**
-	 * POST /add-to-cart -- validates the shared configuration (format,
-	 * paper, mount, finish) and every photo in "items", prices it once, and
-	 * (if WooCommerce is active) adds one cart line per photo, each with
-	 * its own quantity.
+	 * POST /add-to-cart -- validates the shared configuration (paper, mount,
+	 * finish) and every photo in "items" (each with its own format/size),
+	 * prices each item individually, and (if WooCommerce is active) adds
+	 * one cart line per photo, each with its own quantity.
 	 *
 	 * @param WP_REST_Request $request
 	 * @return WP_REST_Response|WP_Error
@@ -363,23 +363,13 @@ class PPS_Rest {
 			return new WP_Error( 'pps_no_items', __( 'Geen foto\'s om te bestellen.', 'photo-print-studio' ), array( 'status' => 400 ) );
 		}
 
-		$pricing_args = array(
-			'width_cm'  => floatval( $request->get_param( 'width_cm' ) ),
-			'height_cm' => floatval( $request->get_param( 'height_cm' ) ),
-			'format_id' => absint( $request->get_param( 'format_id' ) ),
-			'paper_id'  => absint( $request->get_param( 'paper_id' ) ),
-			'mount_id'  => absint( $request->get_param( 'mount_id' ) ),
-			'finish_id' => absint( $request->get_param( 'finish_id' ) ),
-		);
+		$paper_id  = absint( $request->get_param( 'paper_id' ) );
+		$mount_id  = absint( $request->get_param( 'mount_id' ) );
+		$finish_id = absint( $request->get_param( 'finish_id' ) );
 
-		$pricing = PPS_Pricing::calculate( $pricing_args );
-		if ( is_wp_error( $pricing ) ) {
-			$pricing->add_data( array( 'status' => 400 ) );
-			return $pricing;
-		}
-
-		// Validate every photo before adding anything to the cart, so a bad
-		// item in the batch doesn't leave a partial order behind.
+		// Validate and price every photo before adding anything to the
+		// cart, so a bad item in the batch doesn't leave a partial order
+		// behind.
 		$validated = array();
 		foreach ( $items as $item ) {
 			$attachment_id = isset( $item['attachment_id'] ) ? absint( $item['attachment_id'] ) : 0;
@@ -387,11 +377,27 @@ class PPS_Rest {
 				return new WP_Error( 'pps_invalid_photo', __( 'Een van de foto\'s is ongeldig. Probeer opnieuw te uploaden.', 'photo-print-studio' ), array( 'status' => 400 ) );
 			}
 
+			$pricing = PPS_Pricing::calculate(
+				array(
+					'width_cm'  => isset( $item['width_cm'] ) ? floatval( $item['width_cm'] ) : 0,
+					'height_cm' => isset( $item['height_cm'] ) ? floatval( $item['height_cm'] ) : 0,
+					'format_id' => isset( $item['format_id'] ) ? absint( $item['format_id'] ) : 0,
+					'paper_id'  => $paper_id,
+					'mount_id'  => $mount_id,
+					'finish_id' => $finish_id,
+				)
+			);
+			if ( is_wp_error( $pricing ) ) {
+				$pricing->add_data( array( 'status' => 400 ) );
+				return $pricing;
+			}
+
 			$crop     = isset( $item['crop'] ) && is_array( $item['crop'] ) ? array_map( 'floatval', $item['crop'] ) : array();
 			$quantity = isset( $item['quantity'] ) ? max( 1, absint( $item['quantity'] ) ) : 1;
 
 			$validated[] = array(
 				'attachment_id' => $attachment_id,
+				'pricing'       => $pricing,
 				'crop'          => $crop,
 				'quantity'      => $quantity,
 			);
@@ -400,16 +406,16 @@ class PPS_Rest {
 		foreach ( $validated as $entry ) {
 			$cart_item_data = array(
 				'pps_data'   => array_merge(
-					$pricing,
+					$entry['pricing'],
 					array(
 						'attachment_id' => $entry['attachment_id'],
 						'crop'          => $entry['crop'],
 					)
 				),
-				'unique_key' => md5( wp_json_encode( $pricing ) . $entry['attachment_id'] . microtime() ),
+				'unique_key' => md5( wp_json_encode( $entry['pricing'] ) . $entry['attachment_id'] . microtime() ),
 			);
 
-			$result = PPS_WooCommerce::add_to_cart( $cart_item_data, $pricing['total'], $entry['quantity'] );
+			$result = PPS_WooCommerce::add_to_cart( $cart_item_data, $entry['pricing']['total'], $entry['quantity'] );
 			if ( is_wp_error( $result ) ) {
 				$result->add_data( array( 'status' => 400 ) );
 				return $result;
@@ -421,7 +427,6 @@ class PPS_Rest {
 				'success'      => true,
 				'cart_url'     => wc_get_cart_url(),
 				'checkout_url' => wc_get_checkout_url(),
-				'pricing'      => $pricing,
 			)
 		);
 	}

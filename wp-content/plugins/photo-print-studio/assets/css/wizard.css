@@ -451,7 +451,8 @@
 /* ---------- Check step: per-photo rows ---------- */
 
 .pps-check-list,
-.pps-crop-status-list {
+.pps-crop-status-list,
+.pps-format-list {
 	display: flex;
 	flex-direction: column;
 	gap: 0.75rem;
@@ -519,6 +520,22 @@
 	border: 1px solid var(--pps-color-border);
 	padding: 1.25rem;
 	margin: -0.25rem 0 0.75rem;
+}
+
+/* ---------- Size step: per-photo format panel ---------- */
+
+.pps-format-panel {
+	border: 1px solid var(--pps-color-border);
+	border-top: none;
+	padding: 1.25rem 1.25rem 0.25rem;
+	margin-top: -0.75rem;
+}
+
+.pps-crop-toggle-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 0 0 1.25rem;
 }
 
 /* ---------- Summary step: per-photo lines ---------- */

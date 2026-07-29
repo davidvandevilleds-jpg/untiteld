@@ -5,10 +5,11 @@
  * class-pps-rest.php and renders the multi-step flow into the
  * [photo_print_wizard] shortcode container.
  *
- * Customers can upload up to MAX_PHOTOS photos into one order. Format,
- * paper, mount and finish are chosen once and shared by every photo; each
- * photo gets its own quantity, and (if needed) its own crop/rotation, since
- * photos can have different pixel dimensions and aspect ratios.
+ * Customers can upload up to MAX_PHOTOS photos into one order. Paper,
+ * mount and finish are chosen once and shared by every photo; each photo
+ * gets its own format/size, quantity, and (if needed) its own crop/
+ * rotation, since photos can have different pixel dimensions, aspect
+ * ratios, and the customer may want a different print size per photo.
  */
 ( function () {
 	'use strict';
@@ -27,18 +28,13 @@
 
 	var state = {
 		step: 'upload',
-		photos: [], // see newPhoto() below for shape
+		photos: [], // see newPhoto() below for shape -- format/size now lives per photo
 		catalogue: null,
-		formatId: 0,
-		widthCm: 0,
-		heightCm: 0,
-		useCustomSize: false,
-		activeCropIndex: -1,
+		activePhotoIndex: -1, // which photo's format+crop panel is expanded (size step)
 		dpiCheckInFlight: false,
 		mountId: 0,
 		paperId: 0,
 		finishId: 0,
-		unitPricing: null,
 		busy: false,
 		uploadBusy: false,
 		uploadProgress: 0,
@@ -275,11 +271,20 @@
 			imgHeight: uploadResult.height,
 			suggestedMaxLongCm: uploadResult.suggested_max_long_cm,
 			quantity: 1,
+			// Format/size: chosen individually per photo.
+			formatId: 0,
+			widthCm: 0,
+			heightCm: 0,
+			useCustomSize: false,
+			// DPI/crop/rotation, also per photo.
 			dpiInfo: null,
 			showCropTool: false,
+			cropEditorOpen: false,
 			crop: null,
 			rotation: 0,
 			zoom: 1,
+			// Per-photo price (format varies per photo, so price does too).
+			pricing: null,
 		};
 	}
 
@@ -407,8 +412,8 @@
 			removeBtn.addEventListener( 'click', function () {
 				state.photos.splice( index, 1 );
 				// Indices shift after removal -- drop any stale reference to
-				// a photo's crop editor being "open".
-				state.activeCropIndex = -1;
+				// a photo's format/crop panel being "open".
+				state.activePhotoIndex = -1;
 				render();
 			} );
 			card.appendChild( removeBtn );
@@ -609,25 +614,105 @@
 	/* ------------------------------------------------------------------ */
 
 	function renderSize() {
-		// Safety net: if a photo was added (or a format re-picked) since the
-		// last check -- e.g. the customer went back to add one more photo
-		// after already choosing a size -- make sure it still gets checked,
-		// without re-checking photos that already have a result.
-		if ( state.widthCm > 0 && state.heightCm > 0 && ! state.dpiCheckInFlight ) {
-			var hasPending = state.photos.some( function ( photo ) {
-				return null === photo.dpiInfo;
-			} );
-			if ( hasPending ) {
-				runDpiChecksForAllPhotos();
-			}
-		}
-
 		var wrap = document.createElement( 'div' );
 
 		var h2 = document.createElement( 'h2' );
 		h2.textContent = t( 'stepSize' );
 		wrap.appendChild( h2 );
 		wrap.appendChild( errorBox() );
+
+		var intro = document.createElement( 'p' );
+		intro.textContent = t( 'sizeIntro' );
+		wrap.appendChild( intro );
+
+		var list = document.createElement( 'div' );
+		list.className = 'pps-format-list';
+
+		state.photos.forEach( function ( photo, index ) {
+			list.appendChild( renderPhotoFormatRow( photo, index ) );
+		} );
+		wrap.appendChild( list );
+
+		var allReady = state.photos.every( function ( photo ) {
+			return photo.widthCm > 0 && photo.heightCm > 0 && null !== photo.dpiInfo;
+		} );
+		var canContinue = allReady && ! state.dpiCheckInFlight;
+
+		wrap.appendChild( actionsBar( { showBack: true, nextDisabled: ! canContinue } ) );
+
+		return wrap;
+	}
+
+	/**
+	 * One row per photo: a summary of its chosen format (or a prompt to
+	 * choose one) and a button that expands/collapses that photo's own
+	 * format picker + crop editor below it. Only one photo's panel is
+	 * expanded at a time to keep the UI manageable with up to MAX_PHOTOS
+	 * photos.
+	 */
+	function renderPhotoFormatRow( photo, index ) {
+		var container = document.createElement( 'div' );
+
+		var row = document.createElement( 'div' );
+		row.className = 'pps-crop-status-row';
+
+		var thumb = document.createElement( 'img' );
+		thumb.className = 'pps-crop-status-row__thumb';
+		thumb.src = photo.imgUrl;
+		thumb.alt = '';
+		row.appendChild( thumb );
+
+		var label = document.createElement( 'span' );
+		label.className = 'pps-crop-status-row__label';
+
+		var summary = 'Foto ' + ( index + 1 ) + ' — ';
+		if ( photo.widthCm > 0 && photo.heightCm > 0 ) {
+			var formatName = photo.useCustomSize ? t( 'customSize' ) : formatNameById( photo.formatId );
+			summary += formatName + ' (' + photo.widthCm + ' × ' + photo.heightCm + ' cm)';
+		} else {
+			summary += t( 'noFormatChosen' );
+		}
+		label.textContent = summary;
+
+		if ( photo.showCropTool ) {
+			var badge = document.createElement( 'span' );
+			badge.className = 'pps-badge pps-badge--warning';
+			badge.textContent = t( 'attentionBadge' );
+			label.appendChild( badge );
+		}
+		row.appendChild( label );
+
+		var btn = document.createElement( 'button' );
+		btn.type = 'button';
+		btn.className = 'pps-btn pps-btn--secondary';
+		btn.textContent = photo.widthCm > 0 ? t( 'changeFormat' ) : t( 'chooseFormat' );
+		btn.addEventListener( 'click', function () {
+			state.activePhotoIndex = state.activePhotoIndex === index ? -1 : index;
+			render();
+		} );
+		row.appendChild( btn );
+
+		container.appendChild( row );
+
+		if ( state.activePhotoIndex === index ) {
+			container.appendChild( renderPhotoFormatPanel( photo ) );
+		}
+
+		return container;
+	}
+
+	function formatNameById( formatId ) {
+		var format = findById( state.catalogue.formats, formatId );
+		return format ? format.name : t( 'customSize' );
+	}
+
+	/**
+	 * The expanded panel for one photo: standard format grid + custom size
+	 * option, and (once a size is set) that photo's DPI/crop status.
+	 */
+	function renderPhotoFormatPanel( photo ) {
+		var panel = document.createElement( 'div' );
+		panel.className = 'pps-format-panel';
 
 		var grid = document.createElement( 'div' );
 		grid.className = 'pps-option-grid';
@@ -637,16 +722,16 @@
 				name: format.name,
 				meta: format.width_cm + ' × ' + format.height_cm + ' cm',
 				price: format.surcharge ? '+ ' + formatMoney( format.surcharge ) : '',
-				selected: ! state.useCustomSize && state.formatId === format.id,
+				selected: ! photo.useCustomSize && photo.formatId === format.id,
 			} );
 			card.addEventListener( 'click', function () {
-				state.useCustomSize = false;
-				state.formatId = format.id;
-				state.widthCm = format.width_cm;
-				state.heightCm = format.height_cm;
-				resetAllPhotosCropState();
+				photo.useCustomSize = false;
+				photo.formatId = format.id;
+				photo.widthCm = format.width_cm;
+				photo.heightCm = format.height_cm;
+				resetPhotoFormatState( photo );
 				render();
-				runDpiChecksForAllPhotos();
+				runDpiCheckForPhoto( photo );
 			} );
 			grid.appendChild( card );
 		} );
@@ -655,33 +740,26 @@
 			name: t( 'customSize' ),
 			meta: '',
 			price: '',
-			selected: state.useCustomSize,
+			selected: photo.useCustomSize,
 		} );
 		customCard.addEventListener( 'click', function () {
-			state.useCustomSize = true;
-			state.formatId = 0;
+			photo.useCustomSize = true;
+			photo.formatId = 0;
 			render();
 		} );
 		grid.appendChild( customCard );
 
-		wrap.appendChild( grid );
+		panel.appendChild( grid );
 
-		if ( state.useCustomSize ) {
-			wrap.appendChild( renderCustomSizeForm() );
+		if ( photo.useCustomSize ) {
+			panel.appendChild( renderCustomSizeForm( photo ) );
 		}
 
-		if ( state.widthCm > 0 && state.heightCm > 0 ) {
-			wrap.appendChild( renderPerPhotoCropStatus() );
+		if ( photo.widthCm > 0 && photo.heightCm > 0 ) {
+			panel.appendChild( renderPhotoCropStatus( photo ) );
 		}
 
-		var allChecked = state.photos.every( function ( photo ) {
-			return null !== photo.dpiInfo;
-		} );
-		var canContinue = state.widthCm > 0 && state.heightCm > 0 && allChecked && ! state.dpiCheckInFlight;
-
-		wrap.appendChild( actionsBar( { showBack: true, nextDisabled: ! canContinue } ) );
-
-		return wrap;
+		return panel;
 	}
 
 	function buildOptionCard( opts ) {
@@ -725,7 +803,7 @@
 		return card;
 	}
 
-	function renderCustomSizeForm() {
+	function renderCustomSizeForm( photo ) {
 		var box = document.createElement( 'div' );
 		box.className = 'pps-custom-size';
 
@@ -736,23 +814,23 @@
 
 		var widthField = buildNumberField(
 			t( 'widthLabel' ),
-			state.widthCm || '',
+			photo.widthCm || '',
 			settings.min_size_cm,
 			settings.max_width_cm,
 			settings.custom_size_step,
 			function ( val ) {
-				state.widthCm = val;
+				photo.widthCm = val;
 			}
 		);
 
 		var heightField = buildNumberField(
 			t( 'heightLabel' ),
-			state.heightCm || '',
+			photo.heightCm || '',
 			settings.min_size_cm,
 			settings.max_height_cm,
 			settings.custom_size_step,
 			function ( val ) {
-				state.heightCm = val;
+				photo.heightCm = val;
 			}
 		);
 
@@ -770,9 +848,9 @@
 		applyBtn.className = 'pps-btn pps-btn--secondary';
 		applyBtn.textContent = t( 'continue' );
 		applyBtn.addEventListener( 'click', function () {
-			resetAllPhotosCropState();
+			resetPhotoFormatState( photo );
 			render();
-			runDpiChecksForAllPhotos();
+			runDpiCheckForPhoto( photo );
 		} );
 		box.appendChild( applyBtn );
 
@@ -802,79 +880,66 @@
 	}
 
 	/**
-	 * Clears every photo's per-format state (dpi info, crop, rotation) so a
-	 * new format/size choice starts from a clean slate, and invalidates the
-	 * crop tool's cached rotated-image canvas.
+	 * Clears one photo's per-format state (dpi info, crop, rotation) so a
+	 * new format/size choice for that photo starts from a clean slate.
+	 *
+	 * @param {Object} photo
 	 */
-	function resetAllPhotosCropState() {
-		state.photos.forEach( function ( photo ) {
-			photo.dpiInfo = null;
-			photo.showCropTool = false;
-			photo.crop = null;
-			photo.rotation = 0;
-			photo.zoom = 1;
-		} );
-		state.activeCropIndex = -1;
-		rotatedForUrl = null;
-		rotatedForAngle = null;
+	function resetPhotoFormatState( photo ) {
+		photo.dpiInfo = null;
+		photo.showCropTool = false;
+		photo.cropEditorOpen = false;
+		photo.crop = null;
+		photo.rotation = 0;
+		photo.zoom = 1;
+		photo.pricing = null;
+
+		if ( rotatedForUrl === photo.imgUrl ) {
+			rotatedForUrl = null;
+			rotatedForAngle = null;
+		}
 	}
 
 	/**
-	 * Runs /dpi-check for every photo that doesn't have a result yet (skips
-	 * photos already checked, so going back to add one more photo doesn't
-	 * re-check ones already done), and assigns each a sensible default crop
-	 * immediately -- even photos that never need the tool opened still get
-	 * a plain, unrotated full-image crop recorded for production.
+	 * Runs /dpi-check for one photo against its own chosen format, and
+	 * assigns it a sensible default crop immediately -- even if the tool
+	 * never gets opened, a plain, unrotated full-image crop is recorded for
+	 * production.
+	 *
+	 * @param {Object} photo
 	 */
-	function runDpiChecksForAllPhotos() {
-		if ( ! state.widthCm || ! state.heightCm ) {
-			return;
-		}
-
-		var pending = state.photos.filter( function ( photo ) {
-			return null === photo.dpiInfo;
-		} );
-
-		if ( ! pending.length ) {
+	function runDpiCheckForPhoto( photo ) {
+		if ( ! photo.widthCm || ! photo.heightCm ) {
 			return;
 		}
 
 		state.dpiCheckInFlight = true;
-		// Deferred: this can be triggered from renderSize()'s own safety net
-		// (i.e. from inside an in-progress render() call), so re-rendering
-		// synchronously here would re-enter render() while it's still
-		// building the DOM. A macrotask tick guarantees any such call has
-		// already finished first.
-		setTimeout( render, 0 );
+		render();
 
-		Promise.all(
-			pending.map( function ( photo ) {
-				return apiFetch( '/dpi-check', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify( {
-						attachment_id: photo.attachmentId,
-						width_cm: state.widthCm,
-						height_cm: state.heightCm,
-					} ),
-				} ).then( function ( data ) {
-					photo.dpiInfo = data;
-					photo.showCropTool = data.below_threshold || data.needs_crop;
+		apiFetch( '/dpi-check', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify( {
+				attachment_id: photo.attachmentId,
+				width_cm: photo.widthCm,
+				height_cm: photo.heightCm,
+			} ),
+		} )
+			.then( function ( data ) {
+				photo.dpiInfo = data;
+				photo.showCropTool = data.below_threshold || data.needs_crop;
 
-					var base = computeBaseCrop( photo.imgWidth, photo.imgHeight, state.widthCm, state.heightCm );
-					photo.rotation = 0;
-					photo.zoom = 1;
-					photo.crop = {
-						sw: base.sw,
-						sh: base.sh,
-						sx: ( photo.imgWidth - base.sw ) / 2,
-						sy: ( photo.imgHeight - base.sh ) / 2,
-						rotation: 0,
-					};
-				} );
-			} )
-		)
-			.then( function () {
+				var base = computeBaseCrop( photo.imgWidth, photo.imgHeight, photo.widthCm, photo.heightCm );
+				photo.rotation = 0;
+				photo.zoom = 1;
+				photo.crop = {
+					sw: base.sw,
+					sh: base.sh,
+					sx: ( photo.imgWidth - base.sw ) / 2,
+					sy: ( photo.imgHeight - base.sh ) / 2,
+					rotation: 0,
+				};
+
 				state.dpiCheckInFlight = false;
 				render();
 			} )
@@ -886,54 +951,43 @@
 	}
 
 	/**
-	 * One row per photo showing its crop status and a button to open (or
-	 * close) that photo's crop/rotate editor. Only one editor is expanded
-	 * at a time to keep the UI manageable with up to MAX_PHOTOS photos.
+	 * Within one photo's expanded panel: its DPI/crop status, an
+	 * always-available "adjust crop" toggle, and (when opened) the crop
+	 * editor itself.
+	 *
+	 * @param {Object} photo
 	 */
-	function renderPerPhotoCropStatus() {
-		var section = document.createElement( 'div' );
-		section.className = 'pps-crop-status-list';
+	function renderPhotoCropStatus( photo ) {
+		var wrap = document.createElement( 'div' );
 
-		state.photos.forEach( function ( photo, index ) {
-			var row = document.createElement( 'div' );
-			row.className = 'pps-crop-status-row';
+		var row = document.createElement( 'div' );
+		row.className = 'pps-crop-toggle-row';
 
-			var thumb = document.createElement( 'img' );
-			thumb.className = 'pps-crop-status-row__thumb';
-			thumb.src = photo.imgUrl;
-			thumb.alt = '';
-			row.appendChild( thumb );
+		if ( photo.showCropTool ) {
+			var badge = document.createElement( 'span' );
+			badge.className = 'pps-badge pps-badge--warning';
+			badge.textContent = t( 'attentionBadge' );
+			row.appendChild( badge );
+		}
 
-			var label = document.createElement( 'span' );
-			label.className = 'pps-crop-status-row__label';
-			label.textContent = 'Foto ' + ( index + 1 );
-			if ( photo.showCropTool ) {
-				var badge = document.createElement( 'span' );
-				badge.className = 'pps-badge pps-badge--warning';
-				badge.textContent = t( 'attentionBadge' );
-				label.appendChild( badge );
-			}
-			row.appendChild( label );
-
-			var btn = document.createElement( 'button' );
-			btn.type = 'button';
-			btn.className = 'pps-btn pps-btn--secondary';
-			btn.textContent = t( 'adjustCrop' );
-			btn.disabled = ! photo.dpiInfo;
-			btn.addEventListener( 'click', function () {
-				state.activeCropIndex = state.activeCropIndex === index ? -1 : index;
-				render();
-			} );
-			row.appendChild( btn );
-
-			section.appendChild( row );
-
-			if ( state.activeCropIndex === index && photo.dpiInfo ) {
-				section.appendChild( renderCropSection( photo ) );
-			}
+		var btn = document.createElement( 'button' );
+		btn.type = 'button';
+		btn.className = 'pps-btn pps-btn--secondary';
+		btn.textContent = t( 'adjustCrop' );
+		btn.disabled = ! photo.dpiInfo;
+		btn.addEventListener( 'click', function () {
+			photo.cropEditorOpen = ! photo.cropEditorOpen;
+			render();
 		} );
+		row.appendChild( btn );
 
-		return section;
+		wrap.appendChild( row );
+
+		if ( photo.cropEditorOpen && photo.dpiInfo ) {
+			wrap.appendChild( renderCropSection( photo ) );
+		}
+
+		return wrap;
 	}
 
 	/* ---- crop tool (operates on one photo object at a time) ---- */
@@ -1097,11 +1151,11 @@
 		if ( ! photo.dpiInfo ) {
 			return;
 		}
-		var dpiW = effectiveDpi( rotatedWidth, state.widthCm );
-		var dpiH = effectiveDpi( rotatedHeight, state.heightCm );
+		var dpiW = effectiveDpi( rotatedWidth, photo.widthCm );
+		var dpiH = effectiveDpi( rotatedHeight, photo.heightCm );
 		var dpi = Math.min( dpiW, dpiH );
 		var sourceRatio = rotatedWidth / rotatedHeight;
-		var targetRatio = state.widthCm / state.heightCm;
+		var targetRatio = photo.widthCm / photo.heightCm;
 
 		photo.dpiInfo = {
 			dpi: Math.round( dpi * 10 ) / 10,
@@ -1113,12 +1167,12 @@
 		};
 	}
 
-	function baseCropSize() {
-		return computeBaseCrop( rotatedWidth, rotatedHeight, state.widthCm, state.heightCm );
+	function baseCropSize( photo ) {
+		return computeBaseCrop( rotatedWidth, rotatedHeight, photo.widthCm, photo.heightCm );
 	}
 
 	function setDefaultCrop( photo ) {
-		var base = baseCropSize();
+		var base = baseCropSize( photo );
 		photo.zoom = 1;
 		photo.crop = {
 			sw: base.sw,
@@ -1130,7 +1184,7 @@
 	}
 
 	function updateCropFromZoomPan( photo ) {
-		var base = baseCropSize();
+		var base = baseCropSize( photo );
 		var sw = base.sw / photo.zoom;
 		var sh = base.sh / photo.zoom;
 
@@ -1346,24 +1400,41 @@
 	/* Step 7: summary                                                     */
 	/* ------------------------------------------------------------------ */
 
-	function fetchUnitPrice() {
-		apiFetch( '/price', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify( {
-				width_cm: state.widthCm,
-				height_cm: state.heightCm,
-				format_id: state.formatId,
-				paper_id: state.paperId,
-				mount_id: state.mountId,
-				finish_id: state.finishId,
-			} ),
-		} )
-			.then( function ( data ) {
-				state.unitPricing = data;
+	/**
+	 * Prices vary per photo now (each can have its own format), so this
+	 * fetches one /price result per photo, sharing only paper/mount/finish.
+	 */
+	function fetchAllPrices() {
+		state.busy = true;
+		// Deferred: called from inside renderSummary(), i.e. from inside an
+		// in-progress render() call, so re-rendering synchronously here
+		// would re-enter render() while it's still building the DOM.
+		setTimeout( render, 0 );
+
+		Promise.all(
+			state.photos.map( function ( photo ) {
+				return apiFetch( '/price', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify( {
+						width_cm: photo.widthCm,
+						height_cm: photo.heightCm,
+						format_id: photo.formatId,
+						paper_id: state.paperId,
+						mount_id: state.mountId,
+						finish_id: state.finishId,
+					} ),
+				} ).then( function ( data ) {
+					photo.pricing = data;
+				} );
+			} )
+		)
+			.then( function () {
+				state.busy = false;
 				render();
 			} )
 			.catch( function ( err ) {
+				state.busy = false;
 				state.error = err.message || t( 'genericError' );
 				render();
 			} );
@@ -1377,25 +1448,28 @@
 		wrap.appendChild( h2 );
 		wrap.appendChild( errorBox() );
 
-		if ( ! state.unitPricing ) {
-			fetchUnitPrice();
+		var needsPricing = state.photos.some( function ( photo ) {
+			return ! photo.pricing;
+		} );
+		if ( needsPricing ) {
+			if ( ! state.busy ) {
+				fetchAllPrices();
+			}
 			return wrap;
 		}
 
-		var pricing = state.unitPricing;
+		var firstPricing = state.photos[ 0 ].pricing;
 
 		var configBox = document.createElement( 'div' );
 		configBox.className = 'pps-summary';
 
 		var configRows = [
-			[ t( 'stepSize' ), pricing.format_name + ' (' + pricing.width_cm + ' × ' + pricing.height_cm + ' cm)' ],
-			[ t( 'stepPaper' ), pricing.paper_name ],
-			[ t( 'stepMount' ), pricing.mount_name ],
+			[ t( 'stepPaper' ), firstPricing.paper_name ],
+			[ t( 'stepMount' ), firstPricing.mount_name ],
 		];
-		if ( pricing.finish_name ) {
-			configRows.push( [ t( 'stepFinish' ), pricing.finish_name ] );
+		if ( firstPricing.finish_name ) {
+			configRows.push( [ t( 'stepFinish' ), firstPricing.finish_name ] );
 		}
-		configRows.push( [ t( 'unitPriceLabel' ), formatMoney( pricing.total ) ] );
 
 		configRows.forEach( function ( pair ) {
 			configBox.appendChild( summaryRow( pair[ 0 ], pair[ 1 ] ) );
@@ -1407,7 +1481,7 @@
 
 		var subtotal = 0;
 		state.photos.forEach( function ( photo, index ) {
-			var lineTotal = pricing.total * photo.quantity;
+			var lineTotal = photo.pricing.total * photo.quantity;
 			subtotal += lineTotal;
 
 			var row = document.createElement( 'div' );
@@ -1421,7 +1495,9 @@
 
 			var label = document.createElement( 'span' );
 			label.className = 'pps-summary-photo-row__label';
-			label.textContent = 'Foto ' + ( index + 1 ) + ' × ' + photo.quantity;
+			label.textContent =
+				'Foto ' + ( index + 1 ) + ' — ' + photo.pricing.format_name +
+				' (' + photo.pricing.width_cm + ' × ' + photo.pricing.height_cm + ' cm) × ' + photo.quantity;
 			row.appendChild( label );
 
 			var value = document.createElement( 'span' );
@@ -1485,15 +1561,15 @@
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify( {
-				width_cm: state.widthCm,
-				height_cm: state.heightCm,
-				format_id: state.formatId,
 				paper_id: state.paperId,
 				mount_id: state.mountId,
 				finish_id: state.finishId,
 				items: state.photos.map( function ( photo ) {
 					return {
 						attachment_id: photo.attachmentId,
+						width_cm: photo.widthCm,
+						height_cm: photo.heightCm,
+						format_id: photo.formatId,
 						crop: photo.crop || {},
 						quantity: photo.quantity,
 					};

@@ -52,14 +52,14 @@ class PPS_Shortcode {
 			'pps-wizard',
 			PPS_PLUGIN_URL . 'assets/css/wizard.css',
 			array(),
-			PPS_VERSION
+			self::asset_version( 'assets/css/wizard.css' )
 		);
 
 		wp_enqueue_script(
 			'pps-wizard',
 			PPS_PLUGIN_URL . 'assets/js/wizard.js',
 			array(),
-			PPS_VERSION,
+			self::asset_version( 'assets/js/wizard.js' ),
 			true
 		);
 
@@ -73,6 +73,21 @@ class PPS_Shortcode {
 				'i18n'             => $this->i18n_strings(),
 			)
 		);
+	}
+
+	/**
+	 * The file's own last-modified time as a cache-busting version string.
+	 * This changes automatically whenever wizard.js/wizard.css are edited,
+	 * so browsers/CDNs/page-cache plugins never keep serving a stale copy
+	 * after an update (unlike a hand-maintained version constant, which is
+	 * easy to forget to bump).
+	 *
+	 * @param string $relative_path Path relative to the plugin root.
+	 * @return string
+	 */
+	private static function asset_version( $relative_path ) {
+		$path = PPS_PLUGIN_DIR . $relative_path;
+		return file_exists( $path ) ? (string) filemtime( $path ) : PPS_VERSION;
 	}
 
 	/**
@@ -98,7 +113,10 @@ class PPS_Shortcode {
 			'removePhoto'       => __( 'Verwijderen', 'photo-print-studio' ),
 			'maxPhotosReached'  => __( 'Je kan maximaal 10 foto\'s per bestelling toevoegen.', 'photo-print-studio' ),
 			'attentionBadge'    => __( 'Aandacht nodig', 'photo-print-studio' ),
-			'unitPriceLabel'    => __( 'Prijs per stuk', 'photo-print-studio' ),
+			'sizeIntro'         => __( 'Kies voor elke foto een formaat. Papier, montage en afwerking kiest u nadien één keer voor de hele bestelling.', 'photo-print-studio' ),
+			'noFormatChosen'    => __( 'Nog geen formaat gekozen', 'photo-print-studio' ),
+			'chooseFormat'      => __( 'Formaat kiezen', 'photo-print-studio' ),
+			'changeFormat'      => __( 'Formaat wijzigen', 'photo-print-studio' ),
 			'subtotalLabel'     => __( 'Subtotaal', 'photo-print-studio' ),
 			'handlingFeeLabel'  => __( 'Behandelingskost', 'photo-print-studio' ),
 			'dpiWarningTitle'   => __( 'Let op: beperkte beeldkwaliteit', 'photo-print-studio' ),

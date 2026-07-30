@@ -43,8 +43,15 @@ gewoon een nieuwe "Montage-optie" toe met zijn eigen prijs per m² — de
 wizard toont hem automatisch.
 
 Globale instellingen (minimale DPI, maximale afmetingen voor een aangepast
-formaat, behandelingskost, e-mailadres voor bestelmeldingen) staan onder
-**Print Studio → Instellingen**.
+formaat, behandelingskost, verzendkost bij levering, e-mailadres voor
+bestelmeldingen) staan onder **Print Studio → Instellingen**.
+
+In de wizard zelf tonen de stappen **Montage**, **Papier** en **Afwerking**
+de prijs niet meer als los tarief (bv. "€/m²"): bij Montage wordt geen
+prijs getoond (de effectieve kost hangt toch af van de nog te kiezen
+papier/afwerking), en bij Papier en Afwerking ziet de klant meteen de
+werkelijke kostprijs **voor haar eigen foto's/formaten**, herberekend op
+basis van de al gekozen afmetingen.
 
 ## Meerdere foto's in één bestelling
 
@@ -99,10 +106,25 @@ Bij het afronden van de bestelling wordt de uitsnede/rotatie ook echt
 (origineel + rotatie + uitsnede) en dat bestand — niet enkel de
 coördinaten — is wat je terugvindt op het bestellingsscherm in wp-admin
 en wat als bijlage in de nieuwe-bestelling-mail terechtkomt (zie
-hieronder). De originele, onbewerkte foto blijft daarnaast ook gewoon
-downloadbaar. Als het genereren van het uitsnede-bestand om een of andere
-reden niet lukt (bv. een TIFF-bestand op een server zonder Imagick), valt
-alles automatisch terug op de originele foto.
+hieronder). Dat bestand krijgt automatisch een herkenbare bestandsnaam op
+basis van formaat en afwerking (bv. "40-x-60-cm-kleven-op-dibond-123.jpg"),
+zodat meteen duidelijk is welke foto bij welke afwerking hoort zonder de
+bestelling te moeten openen. De originele, onbewerkte foto blijft
+daarnaast ook gewoon downloadbaar. Als het genereren van het
+uitsnede-bestand om een of andere reden niet lukt (bv. een TIFF-bestand op
+een server zonder Imagick), valt alles automatisch terug op de originele
+foto.
+
+## Leveren of afhalen
+
+In het overzicht (laatste stap) kiest de klant verplicht tussen
+**Leveren** en **Afhalen** voor de hele bestelling. Bij "Leveren" wordt de
+onder **Print Studio → Instellingen** ingestelde verzendkost eenmalig aan
+het totaal toegevoegd (net als de behandelingskost); bij "Afhalen" wordt
+niets aangerekend. De gekozen leverwijze komt mee in de
+WooCommerce-bestelling terecht en is zichtbaar op het bestellingsscherm
+in wp-admin (onder het factuuradres) en in zowel de "Nieuwe
+bestelling"-mail als de bevestigingsmail van de klant.
 
 ## Fotominiatuur bij het product
 
@@ -156,18 +178,22 @@ prijs per stuk = oppervlakte × (papier €/m² + montage €/m²)
 
 bestelling totaal = Σ (prijs per stuk × aantal exemplaren, per foto)
                    + vaste behandelingskost (instellingen, éénmalig per bestelling)
+                   + verzendkost (instellingen, enkel bij "Leveren", éénmalig per bestelling)
 ```
 
 De prijs per lopende meter (lm) is bedoeld voor afwerkingen die per lengte
-verkocht worden, zoals randafwerking (zilver/goud/koper) en aluminium
+verkocht worden, zoals randafwerking (zilver/goud/zwart) en aluminium
 frames: de kost is de omtrek van het gekozen formaat in lopende meter,
 maal de ingestelde lm-prijs. Bij activatie van de plugin zijn de
 "randafwerking"- en "aluminium frame"-afwerkingen al met een lm-prijs
 ingesteld; pas dit aan onder **Print Studio → Afwerkingen (Dibond)**.
 
-De behandelingskost wordt precies één keer per bestelling aangerekend (als
-WooCommerce-"kost" op het winkelmandje), ongeacht hoeveel foto's of
-exemplaren er besteld worden.
+De behandelingskost en de verzendkost worden elk precies één keer per
+bestelling aangerekend (als WooCommerce-"kost" op het winkelmandje),
+ongeacht hoeveel foto's of exemplaren er besteld worden. In de wizard zelf
+tonen de stappen Papier en Afwerking daarom niet het losse €/m²- of
+€/lm-tarief, maar de effectieve kostprijs voor de foto's/formaten die de
+klant al gekozen heeft.
 
 ## Stijl
 

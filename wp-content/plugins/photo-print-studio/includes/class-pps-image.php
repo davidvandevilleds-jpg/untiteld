@@ -366,12 +366,18 @@ class PPS_Image {
 	 * counter-clockwise for positive angles, confirmed by test) is used
 	 * here directly to avoid that ambiguity.
 	 *
-	 * @param int   $original_attachment_id
-	 * @param array $crop { @type float $sx, $sy, $sw, $sh, $rotation } in
-	 *                     the original photo's own pixel space.
+	 * @param int    $original_attachment_id
+	 * @param array  $crop { @type float $sx, $sy, $sw, $sh, $rotation } in
+	 *                      the original photo's own pixel space.
+	 * @param string $filename_hint Optional descriptive name (e.g. format +
+	 *                              finish) sanitised into the saved file's
+	 *                              basename, so a shop employee can tell
+	 *                              which print an e-mail attachment belongs
+	 *                              to without opening the order first.
+	 *                              Falls back to a generic name if empty.
 	 * @return array|WP_Error { @type int $attachment_id, @type string $url }
 	 */
-	public static function generate_crop_attachment( $original_attachment_id, $crop ) {
+	public static function generate_crop_attachment( $original_attachment_id, $crop, $filename_hint = '' ) {
 		if ( empty( $crop ) || ! isset( $crop['sw'], $crop['sh'], $crop['sx'], $crop['sy'] ) || ! $crop['sw'] || ! $crop['sh'] ) {
 			return new WP_Error( 'pps_invalid_crop', __( 'Geen geldige uitsnede-gegevens.', 'photo-print-studio' ) );
 		}
@@ -426,7 +432,8 @@ class PPS_Image {
 		$crop_dir   = trailingslashit( $upload_dir['basedir'] ) . 'pps-uploads/crops/';
 		wp_mkdir_p( $crop_dir );
 
-		$filename  = wp_unique_filename( $crop_dir, 'print-crop-' . $original_attachment_id . '.jpg' );
+		$base_name = $filename_hint ? sanitize_file_name( $filename_hint ) : ( 'print-crop-' . $original_attachment_id );
+		$filename  = wp_unique_filename( $crop_dir, $base_name . '.jpg' );
 		$dest_path = $crop_dir . $filename;
 		$saved     = imagejpeg( $dest, $dest_path, 95 );
 		imagedestroy( $dest );
@@ -439,7 +446,7 @@ class PPS_Image {
 
 		$attachment = array(
 			'post_mime_type' => 'image/jpeg',
-			'post_title'     => 'print-crop-' . $original_attachment_id,
+			'post_title'     => $base_name,
 			'post_content'   => '',
 			'post_status'    => 'private',
 		);

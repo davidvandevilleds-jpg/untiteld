@@ -357,9 +357,14 @@ class PPS_Rest {
 			return new WP_Error( 'pps_no_items', __( 'Geen foto\'s om te bestellen.', 'photo-print-studio' ), array( 'status' => 400 ) );
 		}
 
-		$paper_id  = absint( $request->get_param( 'paper_id' ) );
-		$mount_id  = absint( $request->get_param( 'mount_id' ) );
-		$finish_id = absint( $request->get_param( 'finish_id' ) );
+		$paper_id        = absint( $request->get_param( 'paper_id' ) );
+		$mount_id        = absint( $request->get_param( 'mount_id' ) );
+		$finish_id       = absint( $request->get_param( 'finish_id' ) );
+		$delivery_method = sanitize_key( (string) $request->get_param( 'delivery_method' ) );
+
+		if ( ! in_array( $delivery_method, array( 'shipping', 'pickup' ), true ) ) {
+			return new WP_Error( 'pps_invalid_delivery_method', __( 'Kies "leveren" of "afhalen".', 'photo-print-studio' ), array( 'status' => 400 ) );
+		}
 
 		// Validate and price every photo before adding anything to the
 		// cart, so a bad item in the batch doesn't leave a partial order
@@ -395,6 +400,13 @@ class PPS_Rest {
 				'crop'          => $crop,
 				'quantity'      => $quantity,
 			);
+		}
+
+		if ( function_exists( 'wc_load_cart' ) ) {
+			wc_load_cart();
+		}
+		if ( WC()->session ) {
+			WC()->session->set( PPS_WooCommerce::DELIVERY_METHOD_SESSION_KEY, $delivery_method );
 		}
 
 		foreach ( $validated as $entry ) {

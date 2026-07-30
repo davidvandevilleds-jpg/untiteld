@@ -15,8 +15,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class PPS_WooCommerce {
 
-	const PRODUCT_ID_OPTION = 'pps_template_product_id';
-	const CART_ITEM_KEY     = 'pps_data';
+	const PRODUCT_ID_OPTION          = 'pps_template_product_id';
+	const CART_ITEM_KEY              = 'pps_data';
+	const DELIVERY_METHOD_SESSION_KEY = 'pps_delivery_method';
 
 	/**
 	 * @var PPS_WooCommerce|null
@@ -37,8 +38,12 @@ class PPS_WooCommerce {
 		add_filter( 'woocommerce_get_item_data', array( __CLASS__, 'display_cart_item_data' ), 10, 2 );
 		add_action( 'woocommerce_before_calculate_totals', array( __CLASS__, 'apply_cart_item_price' ) );
 		add_action( 'woocommerce_cart_calculate_fees', array( __CLASS__, 'apply_handling_fee' ) );
+		add_action( 'woocommerce_cart_calculate_fees', array( __CLASS__, 'apply_delivery_fee' ) );
+		add_action( 'woocommerce_checkout_create_order', array( __CLASS__, 'persist_delivery_method' ), 10, 2 );
 		add_action( 'woocommerce_checkout_create_order_line_item', array( __CLASS__, 'persist_order_item_meta' ), 10, 4 );
 		add_action( 'woocommerce_after_order_itemmeta', array( __CLASS__, 'render_admin_photo_link' ), 10, 3 );
+		add_action( 'woocommerce_admin_order_data_after_billing_address', array( __CLASS__, 'render_admin_delivery_method' ) );
+		add_action( 'woocommerce_email_order_meta', array( __CLASS__, 'render_email_delivery_method' ), 10, 3 );
 		add_filter( 'woocommerce_email_recipient_new_order', array( __CLASS__, 'ensure_order_notification_recipient' ), 10, 3 );
 		add_filter( 'woocommerce_email_attachments', array( __CLASS__, 'attach_order_photos' ), 10, 4 );
 		add_filter( 'woocommerce_cart_item_thumbnail', array( __CLASS__, 'cart_item_thumbnail' ), 10, 2 );
@@ -139,6 +144,120 @@ class PPS_WooCommerce {
 
 		if ( $has_print ) {
 			$cart->add_fee( __( 'Behandelingskost', 'photo-print-studio' ), $handling_fee, false );
+		}
+	}
+
+	/**
+	 * Adds the configured delivery fee once per order, only when the
+	 * customer chose "leveren" (shipping) in the wizard's summary step --
+	 * "afhalen" (pickup) stays free. The choice itself is recorded in the
+	 * WC session by PPS_Rest::add_to_cart() (there's no per-cart-item place
+	 * to store an order-wide choice like this), read back here on every fee
+	 * recalculation.
+	 *
+	 * @param WC_Cart $cart
+	 */
+	public static function apply_delivery_fee( $cart ) {
+		if ( is_admin() && ! defined( 'DOING_AJAX' ) ) {
+			return;
+		}
+
+		if ( ! WC()->session || 'shipping' !== WC()->session->get( self::DELIVERY_METHOD_SESSION_KEY ) ) {
+			return;
+		}
+
+		$delivery_fee = (float) PPS_Settings::get_value( 'delivery_fee' );
+		if ( $delivery_fee <= 0 ) {
+			return;
+		}
+
+		$has_print = false;
+		foreach ( $cart->get_cart() as $cart_item ) {
+			if ( ! empty( $cart_item[ self::CART_ITEM_KEY ] ) ) {
+				$has_print = true;
+				break;
+			}
+		}
+
+		if ( $has_print ) {
+			$cart->add_fee( __( 'Verzendkost', 'photo-print-studio' ), $delivery_fee, false );
+		}
+	}
+
+	/**
+	 * @param string $method 'shipping' or 'pickup'.
+	 * @return string Translated label for admin/email display.
+	 */
+	private static function delivery_method_label( $method ) {
+		return 'pickup' === $method
+			? __( 'Afhalen', 'photo-print-studio' )
+			: __( 'Leveren', 'photo-print-studio' );
+	}
+
+	/**
+	 * Copies the delivery method the customer chose in the wizard (stored
+	 * in the WC session at add-to-cart time) onto the order itself, so it
+	 * survives past the session and is visible in wp-admin/e-mails.
+	 *
+	 * @param WC_Order $order
+	 * @param array    $data
+	 */
+	public static function persist_delivery_method( $order, $data ) {
+		if ( ! WC()->session ) {
+			return;
+		}
+
+		$method = WC()->session->get( self::DELIVERY_METHOD_SESSION_KEY );
+		if ( ! in_array( $method, array( 'shipping', 'pickup' ), true ) ) {
+			return;
+		}
+
+		$order->update_meta_data( '_pps_delivery_method', $method );
+	}
+
+	/**
+	 * Shows the chosen delivery method on the order edit screen in
+	 * wp-admin, right under the billing address.
+	 *
+	 * @param WC_Order $order
+	 */
+	public static function render_admin_delivery_method( $order ) {
+		$method = $order->get_meta( '_pps_delivery_method', true );
+		if ( ! $method ) {
+			return;
+		}
+
+		printf(
+			'<p><strong>%s</strong> %s</p>',
+			esc_html__( 'Leverwijze:', 'photo-print-studio' ),
+			esc_html( self::delivery_method_label( $method ) )
+		);
+	}
+
+	/**
+	 * Shows the chosen delivery method in both the admin "new order" email
+	 * and the customer's own confirmation e-mail.
+	 *
+	 * @param WC_Order $order
+	 * @param bool     $sent_to_admin
+	 * @param bool     $plain_text
+	 */
+	public static function render_email_delivery_method( $order, $sent_to_admin, $plain_text ) {
+		$method = $order->get_meta( '_pps_delivery_method', true );
+		if ( ! $method ) {
+			return;
+		}
+
+		$label = self::delivery_method_label( $method );
+
+		if ( $plain_text ) {
+			echo esc_html__( 'Leverwijze:', 'photo-print-studio' ) . ' ' . esc_html( $label ) . "\n";
+		} else {
+			printf(
+				'<p><strong>%s</strong> %s</p>',
+				esc_html__( 'Leverwijze:', 'photo-print-studio' ),
+				esc_html( $label )
+			);
 		}
 	}
 
@@ -270,9 +389,18 @@ class PPS_WooCommerce {
 		// original plus coordinates. Falls back silently to the original
 		// (see attach_order_photos() / render_admin_photo_link()) if this
 		// can't be generated, e.g. a TIFF on a host without Imagick.
+		//
+		// The filename itself is built from the format + finish (plus the
+		// attachment ID, to keep it unique across orders that share the
+		// same configuration), so a print-ready file dropped straight into
+		// a folder of e-mail attachments is self-explanatory without
+		// needing to open the order first.
+		$filename_hint = trim( $data['format_name'] . '-' . ( ! empty( $data['finish_name'] ) ? $data['finish_name'] : $data['mount_name'] ) . '-' . $data['attachment_id'] );
+
 		$crop_result = PPS_Image::generate_crop_attachment(
 			$data['attachment_id'],
-			isset( $data['crop'] ) ? $data['crop'] : array()
+			isset( $data['crop'] ) ? $data['crop'] : array(),
+			$filename_hint
 		);
 		if ( ! is_wp_error( $crop_result ) ) {
 			$item->add_meta_data( '_pps_crop_attachment_id', $crop_result['attachment_id'], true );

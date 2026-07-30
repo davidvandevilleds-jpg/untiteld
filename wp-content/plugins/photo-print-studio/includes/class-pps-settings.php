@@ -46,6 +46,7 @@ class PPS_Settings {
 			'max_height_cm'            => 1200,
 			'min_size_cm'              => 10,
 			'handling_fee'             => 0,
+			'delivery_fee'             => 0,
 			'custom_size_step'         => 1,
 			'order_notification_email' => 'order@bunker.gallery',
 		);
@@ -147,6 +148,13 @@ class PPS_Settings {
 					<tr>
 						<th scope="row"><label for="pps_handling_fee"><?php esc_html_e( 'Vaste behandelingskost per bestelling (€)', 'photo-print-studio' ); ?></label></th>
 						<td><input type="number" step="0.01" min="0" id="pps_handling_fee" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[handling_fee]" value="<?php echo esc_attr( $settings['handling_fee'] ); ?>" class="small-text" /></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="pps_delivery_fee"><?php esc_html_e( 'Verzendkost bij levering (€)', 'photo-print-studio' ); ?></label></th>
+						<td>
+							<input type="number" step="0.01" min="0" id="pps_delivery_fee" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[delivery_fee]" value="<?php echo esc_attr( $settings['delivery_fee'] ); ?>" class="small-text" />
+							<p class="description"><?php esc_html_e( 'Wordt eenmalig per bestelling aangerekend wanneer de klant in het overzicht "Leveren" kiest. Bij "Afhalen" wordt niets aangerekend.', 'photo-print-studio' ); ?></p>
+						</td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="pps_custom_size_step"><?php esc_html_e( 'Stapgrootte aangepast formaat (cm)', 'photo-print-studio' ); ?></label></th>

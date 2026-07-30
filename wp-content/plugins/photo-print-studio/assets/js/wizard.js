@@ -35,6 +35,7 @@
 		mountId: 0,
 		paperId: 0,
 		finishId: 0,
+		deliveryMethod: '', // 'shipping' or 'pickup', chosen in the summary step
 		busy: false,
 		uploadBusy: false,
 		uploadProgress: 0,
@@ -241,6 +242,42 @@
 			return 0;
 		}
 		return px / ( cm / 2.54 );
+	}
+
+	/**
+	 * @param {number} widthCm
+	 * @param {number} heightCm
+	 * @return {number} Square metres -- mirrors PPS_Pricing::area_m2().
+	 */
+	function areaM2( widthCm, heightCm ) {
+		return ( widthCm / 100 ) * ( heightCm / 100 );
+	}
+
+	/**
+	 * @param {number} widthCm
+	 * @param {number} heightCm
+	 * @return {number} Running/linear metres -- mirrors PPS_Pricing::perimeter_m().
+	 */
+	function perimeterM( widthCm, heightCm ) {
+		return ( 2 * ( widthCm + heightCm ) ) / 100;
+	}
+
+	/**
+	 * Sums a per-photo cost function across every uploaded photo (each at
+	 * its own chosen size and quantity), so the paper/finish steps can show
+	 * the customer a real total for their own order instead of an abstract
+	 * per-unit rate.
+	 *
+	 * @param {function(Object): number} perPhotoCost
+	 * @return {number}
+	 */
+	function sumOverPhotos( perPhotoCost ) {
+		return state.photos.reduce( function ( sum, photo ) {
+			if ( ! photo.widthCm || ! photo.heightCm ) {
+				return sum;
+			}
+			return sum + perPhotoCost( photo ) * ( photo.quantity || 1 );
+		}, 0 );
 	}
 
 	/**
@@ -1268,7 +1305,10 @@
 				name: mount.name,
 				desc: mount.description,
 				image: mount.image,
-				price: mount.price_per_m2 ? formatMoney( mount.price_per_m2 ) + ' / m²' : '',
+				// Price is shown per photo in the final summary instead --
+				// showing a per-m² rate here (before paper/finish are even
+				// chosen) doesn't reflect what the customer actually pays.
+				price: '',
 				selected: state.mountId === mount.id,
 			} );
 			card.addEventListener( 'click', function () {
@@ -1307,11 +1347,17 @@
 		grid.className = 'pps-option-grid';
 
 		state.catalogue.papers.forEach( function ( paper ) {
+			// Shows what this paper actually costs for the photos/formats
+			// already chosen, rather than an abstract €/m² rate.
+			var cost = sumOverPhotos( function ( photo ) {
+				return areaM2( photo.widthCm, photo.heightCm ) * paper.price_per_m2;
+			} );
+
 			var card = buildOptionCard( {
 				name: paper.name,
 				desc: paper.description,
 				image: paper.image,
-				price: formatMoney( paper.price_per_m2 ) + ' / m²',
+				price: formatMoney( cost ) + ' ' + t( 'costForYourFormat' ),
 				selected: state.paperId === paper.id,
 			} );
 			card.addEventListener( 'click', function () {
@@ -1343,22 +1389,22 @@
 		grid.className = 'pps-option-grid';
 
 		state.catalogue.finishes.forEach( function ( finish ) {
-			var priceParts = [];
-			if ( finish.price_per_lm ) {
-				priceParts.push( formatMoney( finish.price_per_lm ) + ' / lm' );
-			}
-			if ( finish.price_per_m2 ) {
-				priceParts.push( formatMoney( finish.price_per_m2 ) + ' / m²' );
-			}
-			if ( finish.price_fixed ) {
-				priceParts.push( formatMoney( finish.price_fixed ) );
-			}
+			// Shows what this finish actually costs for the photos/formats
+			// already chosen (lm + m² + fixed combined), rather than its
+			// separate per-unit rates.
+			var cost = sumOverPhotos( function ( photo ) {
+				return (
+					perimeterM( photo.widthCm, photo.heightCm ) * finish.price_per_lm +
+					areaM2( photo.widthCm, photo.heightCm ) * finish.price_per_m2 +
+					finish.price_fixed
+				);
+			} );
 
 			var card = buildOptionCard( {
 				name: finish.name,
 				desc: finish.description,
 				image: finish.image,
-				price: priceParts.join( ' + ' ),
+				price: formatMoney( cost ) + ' ' + t( 'costForYourFormat' ),
 				selected: state.finishId === finish.id,
 			} );
 			card.addEventListener( 'click', function () {
@@ -1501,14 +1547,22 @@
 		} );
 		wrap.appendChild( photoList );
 
+		wrap.appendChild( renderDeliveryChoice() );
+
+		var deliveryFeeSetting = ( state.catalogue.settings && state.catalogue.settings.delivery_fee ) || 0;
+		var chargedDeliveryFee = 'shipping' === state.deliveryMethod ? deliveryFeeSetting : 0;
+
 		var totalsBox = document.createElement( 'div' );
 		totalsBox.className = 'pps-summary';
 		totalsBox.appendChild( summaryRow( t( 'subtotalLabel' ), formatMoney( subtotal ) ) );
 
 		var handlingFee = ( state.catalogue.settings && state.catalogue.settings.handling_fee ) || 0;
-		var grandTotal = subtotal + handlingFee;
+		var grandTotal = subtotal + handlingFee + chargedDeliveryFee;
 		if ( handlingFee > 0 ) {
 			totalsBox.appendChild( summaryRow( t( 'handlingFeeLabel' ), formatMoney( handlingFee ) ) );
+		}
+		if ( chargedDeliveryFee > 0 ) {
+			totalsBox.appendChild( summaryRow( t( 'deliveryFeeLabel' ), formatMoney( chargedDeliveryFee ) ) );
 		}
 		totalsBox.appendChild( summaryRow( t( 'total' ), formatMoney( grandTotal ), true ) );
 		wrap.appendChild( totalsBox );
@@ -1524,10 +1578,56 @@
 			actionsBar( {
 				showBack: true,
 				nextLabel: state.busy ? t( 'adding' ) : t( 'addToCart' ),
-				nextDisabled: state.busy || ! PPS_CONFIG.hasWooCommerce,
+				nextDisabled: state.busy || ! PPS_CONFIG.hasWooCommerce || ! state.deliveryMethod,
 				onNext: submitOrder,
 			} )
 		);
+
+		return wrap;
+	}
+
+	/**
+	 * Required choice between having the order shipped or picked up, shown
+	 * in the summary step. Chosen before checkout so the shipping fee (if
+	 * any) is reflected in the total shown to the customer.
+	 */
+	function renderDeliveryChoice() {
+		var wrap = document.createElement( 'div' );
+
+		var heading = document.createElement( 'h3' );
+		heading.textContent = t( 'deliveryHeading' );
+		wrap.appendChild( heading );
+
+		var deliveryFeeSetting = ( state.catalogue.settings && state.catalogue.settings.delivery_fee ) || 0;
+
+		var grid = document.createElement( 'div' );
+		grid.className = 'pps-option-grid';
+
+		[
+			{
+				value: 'shipping',
+				name: t( 'deliveryShip' ),
+				price: deliveryFeeSetting > 0 ? '+ ' + formatMoney( deliveryFeeSetting ) : '',
+			},
+			{
+				value: 'pickup',
+				name: t( 'deliveryPickup' ),
+				price: '',
+			},
+		].forEach( function ( option ) {
+			var card = buildOptionCard( {
+				name: option.name,
+				price: option.price,
+				selected: state.deliveryMethod === option.value,
+			} );
+			card.addEventListener( 'click', function () {
+				state.deliveryMethod = option.value;
+				render();
+			} );
+			grid.appendChild( card );
+		} );
+
+		wrap.appendChild( grid );
 
 		return wrap;
 	}
@@ -1556,6 +1656,7 @@
 				paper_id: state.paperId,
 				mount_id: state.mountId,
 				finish_id: state.finishId,
+				delivery_method: state.deliveryMethod,
 				items: state.photos.map( function ( photo ) {
 					return {
 						attachment_id: photo.attachmentId,

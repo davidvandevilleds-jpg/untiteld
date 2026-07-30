@@ -30,8 +30,41 @@ class PPS_Install {
 			update_option( self::SEED_FLAG_OPTION, 1 );
 		}
 
+		self::migrate_copper_finish_to_black();
+
 		if ( class_exists( 'WooCommerce' ) ) {
 			self::create_template_product();
+		}
+	}
+
+	/**
+	 * Renames the "randafwerking koper" finish seeded by earlier versions of
+	 * this plugin to "randafwerking zwart" -- copper was dropped in favour
+	 * of black. Only touches a post that still has the exact old default
+	 * title, so a shop editor who has since renamed or removed it is left
+	 * alone. Runs on every (re)activation; cheap no-op once already done.
+	 */
+	private static function migrate_copper_finish_to_black() {
+		$old_title = __( 'Onzichtbaar ophangsysteem + randafwerking koper', 'photo-print-studio' );
+		$new_title = __( 'Onzichtbaar ophangsysteem + randafwerking zwart', 'photo-print-studio' );
+
+		$existing = get_posts(
+			array(
+				'post_type'      => PPS_CPT::FINISH,
+				'post_status'    => 'any',
+				'title'          => $old_title,
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+			)
+		);
+
+		if ( ! empty( $existing ) ) {
+			wp_update_post(
+				array(
+					'ID'         => $existing[0],
+					'post_title' => $new_title,
+				)
+			);
 		}
 	}
 
@@ -179,7 +212,7 @@ class PPS_Install {
 			array( __( 'Onzichtbaar ophangsysteem', 'photo-print-studio' ), 0, 0, 0 ),
 			array( __( 'Onzichtbaar ophangsysteem + randafwerking zilver', 'photo-print-studio' ), 15, 0, 0 ),
 			array( __( 'Onzichtbaar ophangsysteem + randafwerking goud', 'photo-print-studio' ), 15, 0, 0 ),
-			array( __( 'Onzichtbaar ophangsysteem + randafwerking koper', 'photo-print-studio' ), 15, 0, 0 ),
+			array( __( 'Onzichtbaar ophangsysteem + randafwerking zwart', 'photo-print-studio' ), 15, 0, 0 ),
 			array( __( 'Aluminium frame wenge light', 'photo-print-studio' ), 22, 0, 15 ),
 			array( __( 'Aluminium frame wenge dark', 'photo-print-studio' ), 22, 0, 15 ),
 		);

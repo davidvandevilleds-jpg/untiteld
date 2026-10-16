@@ -253,11 +253,11 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
     <figcaption><b>Lengtedoorsnede.</b> De voorflap is in de fabriek gebogen. De sluitflap plooit u op de werf dicht. De helling en de lengte van de overstek volgen uit het ontwerp van het dak.</figcaption>
   </figure>
 
-  <section class="stepcard" aria-label="Volledige dakopbouw">
+  <section class="stepcard" aria-label="Dakopbouw voor dit project">
     <div class="stephead">
-      <div class="stepnum" id="num2" aria-hidden="true">9</div>
+      <div class="stepnum" id="num2" aria-hidden="true">8</div>
       <div>
-        <div class="eyebrow">Volledige dakopbouw · indicatief</div>
+        <div class="eyebrow">Dakopbouw voor dit project · indicatief</div>
         <h2 class="steptitle" id="ttl2"></h2>
         <p class="steptext" id="txt2" aria-live="polite"></p>
       </div>
@@ -273,68 +273,56 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
 
   <figure>
     <div class="scroll">
-    <svg id="svgC" viewBox="0 0 900 390" role="img" aria-label="Doorsnede van het volledige dak, van buiten naar binnen: staande-naadplaten, wandfolie, OSB of spaanplaat, tengels met ventilatiespouw, onderdak, spanten met isolatie, dampscherm, technische latten en gipsplaat">
+    <svg id="svgC" viewBox="0 0 1000 330" role="img" aria-label="Lengtedoorsnede van het dak langs de helling, op schaal: twee gordingen LVL-R 75 bij 300 millimeter op 1850 millimeter afstand, daarboven OSB, dampscherm, 160 millimeter isolatie, tengels, tweede laag OSB, wandfolie en de staande-naadplaat">
       <defs>
-        <clipPath id="clipC"><rect x="60" y="0" width="690" height="350"/></clipPath>
         <pattern id="insP" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M0,14 L7,0 L14,14" fill="none" stroke="currentColor" stroke-width="1" opacity=".4"/></pattern>
+        <marker id="ar2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker>
       </defs>
-      <text x="60" y="24" class="lbl">BUITEN</text>
-      <text x="60" y="372" class="lbl">BINNEN</text>
+      <text x="50" y="30" class="lbl">BUITEN</text>
+      <text x="50" y="318" class="lbl">BINNEN</text>
 
-      <g class="it drop on" data-t="7">
-        <rect x="60" y="158" width="690" height="118" fill="var(--insul)"/>
-        <rect x="60" y="158" width="690" height="118" fill="url(#insP)"/>
-        <path class="ldr" d="M700,216 L764,216"/><text x="770" y="220">isolatie</text>
-        <text x="250" y="222" style="fill:currentColor">isolatie tussen de spanten</text>
+      <g class="it drop on" data-t="4">
+        <rect x="50" y="91" width="740" height="48" fill="var(--insul)"/>
+        <rect x="50" y="91" width="740" height="48" fill="url(#insP)"/>
+        <path class="ldr" d="M790,115 L812,148"/><text x="818" y="152">isolatie 16 cm PUR of PIR</text>
       </g>
       <g class="it drop on" data-t="1">
         <g fill="var(--spar)" stroke="currentColor" stroke-width="1">
-          <rect x="130" y="156" width="40" height="120"/><rect x="370" y="156" width="40" height="120"/><rect x="610" y="156" width="40" height="120"/>
+          <rect x="139" y="147" width="22" height="90"/><rect x="694" y="147" width="22" height="90"/>
         </g>
-        <path class="ldr" d="M650,246 L764,246"/><text x="770" y="250">spanten</text>
+        <path class="ldr" d="M716,200 L812,232"/><text x="818" y="236">gording LVL-R 75 × 300</text>
+        <g class="dim"><path d="M112,147 V237" marker-start="url(#ar2)" marker-end="url(#ar2)"/></g>
+        <text x="104" y="196" text-anchor="end">300</text>
+        <g class="dim"><path d="M150,262 H705" marker-start="url(#ar2)" marker-end="url(#ar2)"/><path d="M150,240 V268 M705,240 V268" stroke-width=".8"/></g>
+        <text x="427" y="284" text-anchor="middle">± 1850 mm tussen de gordingen</text>
       </g>
       <g class="it drop on" data-t="2">
-        <path d="M60,156 H750" stroke="var(--under)" stroke-width="3"/>
-        <path class="ldr" d="M750,156 L764,166"/><text x="770" y="170">onderdak</text>
+        <rect x="50" y="140" width="740" height="7" fill="var(--osb)" stroke="currentColor" stroke-width="1"/>
+        <path class="ldr" d="M790,143 L812,212"/><text x="818" y="216">OSB eerste laag</text>
       </g>
       <g class="it drop on" data-t="3">
-        <g fill="var(--wood)" stroke="currentColor" stroke-width="1">
-          <rect x="130" y="122" width="40" height="34"/><rect x="370" y="122" width="40" height="34"/><rect x="610" y="122" width="40" height="34"/>
-        </g>
-        <text x="260" y="143" class="lbl" text-anchor="middle">ventilatiespouw</text>
-        <path class="ldr" d="M650,139 L764,138"/><text x="770" y="142">tengels</text>
-      </g>
-      <g class="it drop on" data-t="4">
-        <rect x="60" y="94" width="690" height="28" fill="var(--osb)" stroke="currentColor" stroke-width="1"/>
-        <path class="ldr" d="M740,108 L764,120"/><text x="770" y="124">OSB / spaanplaat</text>
+        <path d="M50,139.5 H790" stroke="var(--damp)" stroke-width="2.5"/>
+        <path class="ldr" d="M790,139.5 L812,184"/><text x="818" y="188" style="fill:var(--damp)">dampscherm</text>
       </g>
       <g class="it drop on" data-t="5">
-        <path d="M60,92.5 H750" stroke="var(--folie)" stroke-width="2.5"/>
-        <path class="ldr" d="M750,92.5 L764,98"/><text x="770" y="102" style="fill:var(--folie)">wandfolie</text>
+        <rect x="50" y="79" width="740" height="12" fill="var(--wood)" stroke="currentColor" stroke-width="1"/>
+        <path class="ldr" d="M790,85 L812,100"/><text x="818" y="104">tengels, geventileerde spouw</text>
       </g>
-      <g clip-path="url(#clipC)"><g class="it drop on" data-t="6">
-        <g transform="translate(60,0)"><path class="pan-edge" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/><path class="pan" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/></g>
-        <g transform="translate(330,0)"><path class="pan-edge" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/><path class="pan" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/></g>
-        <g transform="translate(600,0)"><path class="pan-edge" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/><path class="pan" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/></g>
-      </g></g>
       <g class="it drop on" data-t="6">
-        <path class="ldr" d="M740,90 L764,74"/><text x="770" y="78">staande-naadplaat</text>
+        <rect x="50" y="72" width="740" height="7" fill="var(--osb)" stroke="currentColor" stroke-width="1"/>
+        <path class="ldr" d="M790,75 L812,80"/><text x="818" y="84">OSB tweede laag</text>
+      </g>
+      <g class="it drop on" data-t="7">
+        <path d="M50,71 H790" stroke="var(--folie)" stroke-width="2.5"/>
+        <path class="ldr" d="M770,71 L812,62"/><text x="818" y="66" style="fill:var(--folie)">wandfolie</text>
       </g>
       <g class="it drop on" data-t="8">
-        <path d="M60,278 H750" stroke="var(--damp)" stroke-width="2.5"/>
-        <path class="ldr" d="M750,278 L764,286"/><text x="770" y="290" style="fill:var(--damp)">dampscherm</text>
-      </g>
-      <g class="it drop on" data-t="9">
-        <g fill="var(--wood)" stroke="currentColor" stroke-width="1">
-          <rect x="130" y="280" width="40" height="32"/><rect x="370" y="280" width="40" height="32"/><rect x="610" y="280" width="40" height="32"/>
-        </g>
-        <rect x="60" y="312" width="690" height="20" fill="var(--gips)" stroke="currentColor" stroke-width="1"/>
-        <path class="ldr" d="M650,296 L764,306"/><text x="770" y="310">technische latten</text>
-        <path class="ldr" d="M750,322 L764,330"/><text x="770" y="334">gipsplaat</text>
+        <path class="pan-edge" d="M50,69 H790"/><path class="pan" d="M50,69 H790"/>
+        <path class="ldr" d="M760,69 L812,42"/><text x="818" y="46">JI Vieo Edge 2.0 500</text>
       </g>
     </svg>
     </div>
-    <figcaption><b>Volledige dakopbouw.</b> Doorsnede dwars op de helling, van buiten naar binnen. De lagen volgen de volgorde waarin ze op de bouwplaats komen. Diktes en afstanden zijn niet op schaal en volgen uit het ontwerp.</figcaption>
+    <figcaption><b>Lengtedoorsnede op schaal.</b> Gordingen en lagen staan op schaal 1 : 3,3. De plaat is hier als lijn getekend. De tengels zijn in de lengte doorgesneden, de lucht stroomt in de spouw langs de helling.</figcaption>
   </figure>
 
   <div class="data">
@@ -357,7 +345,8 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
       <h2>Let op</h2>
       <p class="note"><b>Bron:</b> datasheet van Joris Ide (versie 03 sep 2026) en tekening Roof, revisie C van 22.04.2025.</p>
       <p class="note"><b>Niet in de bijlagen:</b> bevestigingsmiddelen, afstanden tussen latten en de opbouw onder de drager. Vraag de montagehandleiding bij Joris Ide aan voor die gegevens.</p>
-      <p class="note"><b>Dakopbouw:</b> de lagen onder de drager zijn een gebruikelijke opbouw met geventileerde spouw, geen voorschrift van Joris Ide. Dikte van de isolatie, type onderdak en dampscherm, ventilatie bij dakrand en nok en het gebruik van OSB bepaalt het ontwerp. Het datasheet noemt spaanplaat en latten, niet OSB.</p>
+      <p class="note"><b>Uit de plannen:</b> grondplan S1 toont gordingen LVL-R 75 × 300 mm op ± 1,85 m, min. 5° helling en JIVIEO ROOF 1050 van 130 mm. De doorsnede noemt een sandwichpaneel van 15 cm PIR. Met dit enkelvoudige profiel verandert dus de opbouw. Meld het aan de architect en de ingenieur.</p>
+      <p class="note"><b>Dakopbouw:</b> de lagen zijn een aanbeveling, geen voorschrift van Joris Ide. Dikte, bevestiging, ventilatie bij dakrand en nok, OSB als drager en zonnepanelen op de naden bepalen ontwerp en fabrikant.</p>
       <p class="note">Afwerkingsstukken zijn op aanvraag beschikbaar, zie brochure MR036 Accessoires.</p>
     </section>
   </div>
@@ -435,15 +424,14 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
 })();
 (function () {
   var L = [
-    ["Spanten", "De draagstructuur van het dak. Afstand en afmeting volgen uit de stabiliteitsstudie."],
-    ["Onderdak", "Een damp-open onderdak over de spanten is de tweede waterkering. Het type volgt uit het ontwerp."],
-    ["Tengels en spouw", "Tengels langs de helling boven de spanten maken een geventileerde spouw onder de dakdrager. De lucht moet bij de dakrand binnen en bij de nok buiten kunnen."],
-    ["OSB of spaanplaat", "De dakdrager voor het profiel. Het datasheet noemt dennenhouten latten of spaanplaatpanelen. Vraag Joris Ide of OSB is toegelaten."],
-    ["Wandfolie", "Verplicht bij spaanplaatpanelen volgens het datasheet. Ze ligt tussen de drager en de staande-naadplaten."],
-    ["JI Vieo Edge 2.0 500", "De platen klikken in elkaar en dekken 500 mm per stuk. Het dak is nu dicht."],
-    ["Isolatie tussen de spanten", "Aan de binnenzijde komt de isolatie tussen de spanten. De dikte volgt uit de energie-eisen."],
-    ["Dampscherm", "Het dampscherm ligt aan de warme zijde van de isolatie, onder de spanten. Naden en aansluitingen sluit u luchtdicht af."],
-    ["Technische latten en gipsplaat", "Latten onder het dampscherm laten ruimte voor leidingen. Daarover komen de gipsplaten als binnenafwerking."]
+    ["Gordingen", "De architect plaatst gelamineerde gordingen LVL-R 75 × 300 mm op ongeveer 1,85 m afstand (grondplan S1). Ze worden verhoogd tot de gewenste dakhelling, minimaal 5° voor dakplaten."],
+    ["OSB eerste laag", "Ja, leg OSB direct op de gordingen. Het enkelvoudige profiel draagt niet zelf over 1,85 m, dus het dak heeft een doorlopende drager nodig. Deze laag draagt ook de isolatie. Dikte en bevestiging bepaalt de stabiliteitsstudie."],
+    ["Dampscherm", "Het dampscherm komt op de OSB, aan de warme zijde van de isolatie. Naden en randen sluit u luchtdicht af. De architect gebruikt op de platte daken ook dampscherm met PUR 16 cm."],
+    ["Isolatie 16 cm", "PUR of PIR, bij voorkeur in twee lagen met verspringende naden. 16 cm volgt de rest van het ontwerp. De EPB-eis bepaalt de uiteindelijke dikte."],
+    ["Tengels en spouw", "Tengels langs de helling, met lange constructieschroeven door de isolatie in de gordingen vastgezet. Ze maken een geventileerde spouw onder de dakdrager. Aantal en schroeven berekent de ingenieur."],
+    ["OSB tweede laag", "De dakdrager voor het profiel, op de tengels. Het datasheet noemt spaanplaat of dennenhouten latten. Vraag Joris Ide of OSB is toegelaten."],
+    ["Wandfolie", "Verplicht bij spaanplaatpanelen volgens het datasheet. Ze ligt tussen de dakdrager en de staande-naadplaten."],
+    ["JI Vieo Edge 2.0 500", "De platen klikken in elkaar en dekken 500 mm per stuk. Het dak is nu dicht."]
   ];
   var N = L.length, step = N, timer = null;
   var $ = function (id) { return document.getElementById(id); };

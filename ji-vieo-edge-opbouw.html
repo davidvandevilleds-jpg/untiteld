@@ -24,6 +24,8 @@
   --insul: #e4cf63;
   --gips: #d4d4cf;
   --osb: #c99a55;
+  --steel: #8d9aa0;
+  --glass: #8fd0ec;
   --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --f-body: "Barlow", system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -32,13 +34,13 @@
   :root:not([data-theme="light"]) {
     --bg: #0f1618; --card: #162023; --sheet: #101a1d; --ink: #e4ecee; --mute: #94a6ac; --line: #2c3b40;
     --accent: #3fc1b3; --accent-ink: #05211e; --hot: #ff8a3d; --wood: #9c7a4a; --board: #8c7a58; --spar: #7a5c33;
-    --folie: #4aa9de; --panel-edge: #9fb0b6; --under: #a483ee; --damp: #ff8a52; --insul: #8a7a2e; --gips: #596164; --osb: #8d6a38; color-scheme: dark;
+    --folie: #4aa9de; --panel-edge: #9fb0b6; --under: #a483ee; --damp: #ff8a52; --insul: #8a7a2e; --gips: #596164; --osb: #8d6a38; --steel: #6d7a80; --glass: #3f86ad; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f1618; --card: #162023; --sheet: #101a1d; --ink: #e4ecee; --mute: #94a6ac; --line: #2c3b40;
   --accent: #3fc1b3; --accent-ink: #05211e; --hot: #ff8a3d; --wood: #9c7a4a; --board: #8c7a58; --spar: #7a5c33;
-  --folie: #4aa9de; --panel-edge: #9fb0b6; --under: #a483ee; --damp: #ff8a52; --insul: #8a7a2e; --gips: #596164; --osb: #8d6a38; color-scheme: dark;
+  --folie: #4aa9de; --panel-edge: #9fb0b6; --under: #a483ee; --damp: #ff8a52; --insul: #8a7a2e; --gips: #596164; --osb: #8d6a38; --steel: #6d7a80; --glass: #3f86ad; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body {
@@ -122,7 +124,7 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
   <header>
     <div class="eyebrow">Joris Ide · artikel 19096 · staande naad</div>
     <h1>JI Vieo Edge <span>2.0 500</span></h1>
-    <p class="lede">Zo plaatst u de platen, van drager tot afgewerkte onderrand. Daaronder staat de volledige dakopbouw met onderdak, isolatie, OSB en dampscherm. De tekeningen zijn schematisch.</p>
+    <p class="lede">Zo plaatst u de platen, van drager tot afgewerkte onderrand. Daaronder staan de dakopbouw op de gordingen en de aansluiting van het grote raam. De tekeningen zijn schematisch.</p>
   </header>
 
   <section class="stepcard" aria-label="Plaatsingsstappen">
@@ -325,6 +327,90 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
     <figcaption><b>Lengtedoorsnede op schaal.</b> Gordingen en lagen staan op schaal 1 : 3,3. De plaat is hier als lijn getekend. De tengels zijn in de lengte doorgesneden, de lucht stroomt in de spouw langs de helling.</figcaption>
   </figure>
 
+  <section class="stepcard" aria-label="Het grote raam in het dak">
+    <div class="stephead">
+      <div class="stepnum" id="num3" aria-hidden="true">7</div>
+      <div>
+        <div class="eyebrow">Het grote raam · principeschets</div>
+        <h2 class="steptitle" id="ttl3"></h2>
+        <p class="steptext" id="txt3" aria-live="polite"></p>
+      </div>
+    </div>
+    <div class="bar"><i id="bar3"></i></div>
+    <div class="controls">
+      <button class="primary" id="play3" type="button">Speel raamdetail af</button>
+      <button id="prev3" type="button">Vorige</button>
+      <button id="next3" type="button">Volgende</button>
+      <div class="chips" id="chips3" role="group" aria-label="Ga naar stap"></div>
+    </div>
+  </section>
+
+  <figure>
+    <div class="scroll">
+    <svg id="svgD" viewBox="0 0 1000 300" role="img" aria-label="Lengtedoorsnede door het grote raam in het dak: stalen liggers boven en onder de opening, houten opstand, dakopbouw die tegen de opstand stopt, glaselement erop, gootstuk boven het raam en afdekprofiel onder het raam">
+      <text x="40" y="22" class="lbl">LENGTEDOORSNEDE DOOR HET RAAM · links boven in de helling, rechts onder</text>
+
+      <g class="it drop on" data-t="1">
+        <g fill="var(--spar)" stroke="currentColor" stroke-width="1"><rect x="60" y="117" width="14" height="54"/><rect x="886" y="117" width="14" height="54"/></g>
+        <g fill="var(--steel)" stroke="currentColor" stroke-width="1">
+          <path d="M170,117 h20 v6 h-7 v28 h7 v6 h-20 v-6 h7 v-28 h-7 z"/>
+          <path d="M760,117 h20 v6 h-7 v28 h7 v6 h-20 v-6 h7 v-28 h-7 z"/>
+        </g>
+        <path class="ldr" d="M180,157 V196"/><text x="180" y="210" text-anchor="middle">IPE220 B1.1</text>
+        <path class="ldr" d="M770,157 V196"/><text x="770" y="210" text-anchor="middle">IPE220 B1.2</text>
+        <path class="ldr" d="M67,171 V196"/><text x="67" y="210" text-anchor="middle">gording</text>
+        <g class="dim"><path d="M190,238 H760" marker-start="url(#ar2)" marker-end="url(#ar2)"/><path d="M190,160 V244 M760,160 V244" stroke-width=".8"/></g>
+        <text x="475" y="258" text-anchor="middle">opening ± 317 cm langs de helling</text>
+      </g>
+      <g class="it drop on" data-t="2">
+        <g fill="var(--osb)" stroke="currentColor" stroke-width="1">
+          <rect x="176" y="44" width="14" height="73"/><rect x="760" y="44" width="14" height="73"/>
+        </g>
+        <path class="ldr" d="M183,80 L215,80 L228,60"/><text x="232" y="56">opstand (houten kader)</text>
+      </g>
+      <g class="it drop on" data-t="3">
+        <g fill="var(--osb)" stroke="currentColor" stroke-width="1"><rect x="40" y="113" width="136" height="4"/><rect x="774" y="113" width="186" height="4"/></g>
+        <path d="M40,112.5 H176 M774,112.5 H960 M176,112.5 V102 M774,112.5 V102" stroke="var(--damp)" stroke-width="2.5" fill="none"/>
+        <text x="40" y="100" style="fill:var(--damp)">dampscherm, luchtdicht op de opstand</text>
+      </g>
+      <g class="it drop on" data-t="4">
+        <g fill="var(--insul)"><rect x="40" y="83" width="136" height="29"/><rect x="774" y="83" width="186" height="29"/><rect x="166" y="46" width="10" height="37"/><rect x="774" y="46" width="10" height="37"/></g>
+        <g fill="url(#insP)"><rect x="40" y="83" width="136" height="29"/><rect x="774" y="83" width="186" height="29"/><rect x="166" y="46" width="10" height="37"/><rect x="774" y="46" width="10" height="37"/></g>
+      </g>
+      <g class="it drop on" data-t="5">
+        <g fill="var(--wood)" stroke="currentColor" stroke-width="1"><rect x="40" y="76" width="126" height="7"/><rect x="784" y="76" width="176" height="7"/></g>
+        <g fill="var(--osb)" stroke="currentColor" stroke-width="1"><rect x="40" y="72" width="126" height="4"/><rect x="784" y="72" width="176" height="4"/></g>
+        <path d="M40,71 H166 M784,71 H960" stroke="var(--folie)" stroke-width="2.5"/>
+      </g>
+      <g class="it drop on" data-t="6">
+        <rect x="172" y="36" width="606" height="8" fill="var(--glass)" stroke="currentColor" stroke-width="1"/>
+        <g fill="currentColor"><circle cx="191" cy="44" r="3"/><circle cx="759" cy="44" r="3"/></g>
+        <text x="475" y="30" text-anchor="middle">glaselement Pauwels Veranda's, kit DC 895</text>
+      </g>
+      <g class="it drop on" data-t="7">
+        <path class="pan-edge" d="M40,69 H150 V80"/><path class="pan" d="M40,69 H150 V80"/>
+        <path d="M152,60 V76 H164 V56" fill="none" stroke="var(--hot)" stroke-width="2.5" stroke-linejoin="round"/>
+        <path class="ldr" d="M158,76 L130,128 L96,140"/><text x="40" y="150">gootstuk boven het raam</text>
+        <path class="pan-edge" d="M960,69 H790 V52"/><path class="pan" d="M960,69 H790 V52"/>
+        <path d="M772,38 H800 V56" fill="none" stroke="var(--hot)" stroke-width="2.5" stroke-linejoin="round"/>
+        <path class="ldr" d="M800,47 L850,30 L870,24"/><text x="874" y="28">afdekprofiel</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption><b>Principe van de aansluiting.</b> Opening, liggers en lagen staan onderling op schaal. De hoogte van de opstand en het glaspakket volgen de tekening van Pauwels. Gootstuk en afdekprofiel werkt de dakdekker uit met Joris Ide.</figcaption>
+  </figure>
+
+  <section class="panel" aria-label="OSB of spaanplaat">
+    <h2>OSB of spaanplaat</h2>
+    <dl>
+      <dt>Advies</dt><dd>OSB/3, tong en groef, als dakdrager. Spaanplaat P5 is het alternatief.</dd>
+      <dt>Vocht</dt><dd>OSB/3 is bedoeld voor dragend gebruik in vochtige omstandigheden. Spaanplaat P5 is ook vochtbestendig, maar zwelt aan de randen sneller op als het regent tijdens de bouw.</dd>
+      <dt>Sterkte</dt><dd>OSB draagt bij dezelfde dikte meestal meer. Dat helpt over de afstand tussen de tengels.</dd>
+      <dt>Datasheet</dt><dd>Joris Ide noemt alleen spaanplaat of dennenhouten latten, met wandfolie bij spaanplaat. OSB staat er niet in.</dd>
+      <dt>Doen</dt><dd>Vraag Joris Ide schriftelijk of OSB/3 is toegelaten. Houd wandfolie aan, ook op OSB.</dd>
+    </dl>
+  </section>
+
   <div class="data">
     <section class="panel" aria-label="Gegevens">
       <h2>Gegevens uit het datasheet</h2>
@@ -460,6 +546,45 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
   });
   $("next2").addEventListener("click", function () { stop(); go(step + 1); });
   $("prev2").addEventListener("click", function () { stop(); go(step - 1); });
+  go(N);
+})();
+(function () {
+  var L = [
+    ["Opening in de draagstructuur", "In het grondplan stoppen de gordingen bij het grote raam. De liggers B1.1 en B1.2 (IPE220) dragen het dak boven en onder de opening, tussen de gelamineerde liggers. De opening meet ongeveer 317 cm langs de helling en 377 cm in de breedte."],
+    ["Opstand rond de opening", "Een houten kader op de stalen liggers rondom de opening. Het steekt boven het dakvlak uit, zodat het water er niet overheen loopt. De hoogte volgt uit de tekening van Pauwels Veranda's."],
+    ["OSB en dampscherm aansluiten", "OSB eerste laag en dampscherm lopen tot tegen de opstand. Plak het dampscherm luchtdicht op de opstand. Op deze plek ontstaan de meeste lekken."],
+    ["Isolatie langs de opstand", "De isolatie van 16 cm loopt tot de opstand. Isoleer ook de buitenkant van de opstand, anders ontstaat een koudebrug rond het raam."],
+    ["Tengels, OSB en wandfolie", "Tengels, tweede laag OSB en wandfolie lopen tot de isolatie langs de opstand. Laat de ventilatiespouw langs de zijkanten van de opening doorlopen."],
+    ["Glaselement plaatsen", "Het raam van Pauwels Veranda's komt op de opstand. Profiel V2100 en kit DC 895 volgen hun tekening."],
+    ["Platen aansluiten", "Boven het raam eindigen de platen in een gootstuk dat het water naar de zijkanten leidt. Onder het raam beginnen de platen met een opstaande eindflap onder een afdekprofiel. Aan de zijkanten lopen de platen door tot tegen de opstand."]
+  ];
+  var N = L.length, step = N, timer = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var chips = $("chips3");
+  for (var i = 1; i <= N; i++) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = i; b.setAttribute("aria-label", "Stap " + i + ": " + L[i - 1][0]);
+    (function (n) { b.addEventListener("click", function () { stop(); go(n); }); })(i);
+    chips.appendChild(b);
+  }
+  function go(n) {
+    step = Math.max(0, Math.min(N, n));
+    var shown = Math.max(1, step);
+    document.querySelectorAll("#svgD [data-t]").forEach(function (el) { el.classList.toggle("on", step >= +el.dataset.t); });
+    $("num3").textContent = step;
+    $("ttl3").textContent = step === 0 ? "Leeg dakvlak" : L[shown - 1][0];
+    $("txt3").textContent = step === 0 ? "Druk op Volgende of speel het raamdetail af." : L[shown - 1][1];
+    $("bar3").style.width = (step / N * 100) + "%";
+    chips.querySelectorAll("button").forEach(function (c, k) { if (k + 1 === step) c.setAttribute("aria-current", "step"); else c.removeAttribute("aria-current"); });
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } $("play3").textContent = "Speel raamdetail af"; }
+  $("play3").addEventListener("click", function () {
+    if (timer) { stop(); return; }
+    go(0); $("play3").textContent = "Pauzeer";
+    timer = setInterval(function () { if (step >= N) { stop(); return; } go(step + 1); }, 2400);
+  });
+  $("next3").addEventListener("click", function () { stop(); go(step + 1); });
+  $("prev3").addEventListener("click", function () { stop(); go(step - 1); });
   go(N);
 })();
 </script>

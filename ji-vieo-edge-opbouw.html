@@ -108,6 +108,10 @@ svg[data-mode="spaan"] .only-latten { display: none; }
 .drop { transform: translateY(-34px); }
 .drop.on { transform: none; }
 svg .ldr { stroke: currentColor; stroke-width: .8; fill: none; opacity: .6; }
+svg .flow { stroke: var(--folie); stroke-width: 2.5; fill: none; stroke-dasharray: 7 6; }
+svg.run .flow { animation: flow 1s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -13; } }
+@media (prefers-reduced-motion: reduce) { svg.run .flow { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .it, .flap, .bar i { transition: none; } }
 
 .data { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; }
@@ -400,6 +404,53 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
     <figcaption><b>Principe van de aansluiting.</b> Opening, liggers en lagen staan onderling op schaal. De hoogte van de opstand en het glaspakket volgen de tekening van Pauwels. Gootstuk en afdekprofiel werkt de dakdekker uit met Joris Ide.</figcaption>
   </figure>
 
+  <section class="stepcard" aria-label="Afwatering boven het raam">
+    <div class="stephead">
+      <div class="stepnum" aria-hidden="true">↓</div>
+      <div>
+        <div class="eyebrow">Afwatering · bovenaanzicht</div>
+        <h2 class="steptitle">Water om het raam heen leiden</h2>
+        <p class="steptext">Tussen de nok en het raam ligt ongeveer 1,7 m dakvlak (uit het grondplan). Dat water loopt in de pannen naar de hoge kant van het raam. Een gootstuk boven de opstand vangt het op en laat het naast het raam weer in de pannen vallen.</p>
+      </div>
+    </div>
+    <div class="controls"><button class="primary" id="water" type="button">Laat het water lopen</button></div>
+  </section>
+
+  <figure>
+    <div class="scroll">
+    <svg id="svgE" viewBox="0 0 1000 560" role="img" aria-label="Bovenaanzicht van het dak: platen met naden lopen van de nok naar beneden, boven het raam ligt een gootstuk dat het water naar beide zijkanten leidt, waar het naast de opstand weer in de pannen omlaag loopt">
+      <text x="80" y="14" class="lbl">NOK</text>
+      <g><rect x="80" y="20" width="35" height="516" fill="var(--panel)" opacity="0.92"/><rect x="115" y="20" width="35" height="516" fill="var(--panel)" opacity="0.8"/><rect x="150" y="20" width="35" height="516" fill="var(--panel)" opacity="0.92"/><rect x="185" y="20" width="35" height="516" fill="var(--panel)" opacity="0.8"/><rect x="220" y="20" width="35" height="516" fill="var(--panel)" opacity="0.92"/><rect x="255" y="20" width="35" height="516" fill="var(--panel)" opacity="0.8"/><rect x="290" y="20" width="35" height="516" fill="var(--panel)" opacity="0.92"/><rect x="325" y="20" width="35" height="516" fill="var(--panel)" opacity="0.8"/><rect x="360" y="20" width="35" height="516" fill="var(--panel)" opacity="0.92"/><rect x="395" y="20" width="35" height="516" fill="var(--panel)" opacity="0.8"/><rect x="430" y="20" width="35" height="516" fill="var(--panel)" opacity="0.92"/><rect x="465" y="20" width="35" height="516" fill="var(--panel)" opacity="0.8"/><rect x="500" y="20" width="35" height="516" fill="var(--panel)" opacity="0.92"/><rect x="535" y="20" width="35" height="516" fill="var(--panel)" opacity="0.8"/><path d="M80,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M115,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M150,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M185,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M220,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M255,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M290,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M325,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M360,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M395,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M430,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M465,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M500,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M535,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/><path d="M570,20 V536" stroke="var(--panel-edge)" stroke-width="1" opacity=".6"/></g>
+      <rect x="185" y="139" width="280" height="222" fill="var(--glass)" stroke="var(--osb)" stroke-width="6"/>
+      <text x="325" y="254" text-anchor="middle" style="fill:var(--ink)">raam</text>
+      <rect x="150" y="119" width="350" height="14" rx="2" fill="var(--hot)"/>
+      <path d="M325,126 H168 M325,126 H482" stroke="var(--bg)" stroke-width="1.5" marker-end="url(#ar2)"/>
+      <path class="flow" d="M167.5,34 V118"/><path class="flow" d="M202.5,34 V118"/><path class="flow" d="M237.5,34 V118"/><path class="flow" d="M272.5,34 V118"/><path class="flow" d="M307.5,34 V118"/><path class="flow" d="M342.5,34 V118"/><path class="flow" d="M377.5,34 V118"/><path class="flow" d="M412.5,34 V118"/><path class="flow" d="M447.5,34 V118"/><path class="flow" d="M482.5,34 V118"/>
+      <path class="flow" d="M167,126 V536"/><path class="flow" d="M483,126 V536"/>
+      <g class="dim"><path d="M185,380 H465" marker-start="url(#ar2)" marker-end="url(#ar2)"/></g>
+      <text x="325" y="398" text-anchor="middle">kader ± 8 platen (4 m)</text>
+      <g>
+        <path class="ldr" d="M500,126 L590,100"/><text x="598" y="96">gootstuk, loopt over de ribben</text><text x="598" y="112" class="lbl">afschot naar beide kanten</text>
+        <path class="ldr" d="M483,300 L590,300"/><text x="598" y="296">pannen naast de opstand</text><text x="598" y="312" class="lbl">water loopt door naar de dakrand</text>
+        <path class="ldr" d="M300,60 L590,60"/><text x="598" y="56">pannen boven het raam</text><text x="598" y="72" class="lbl">ongeveer 1,7 m vanaf de nok</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption><b>Bovenaanzicht.</b> De platen zijn 500 mm breed. Het kader rond het glas is hier als voorbeeld 8 platen breed getekend, zodat het raam tussen twee naden past. De goot loopt een plaat verder dan het raam, zodat het water naast de opstand in een open pan valt.</figcaption>
+  </figure>
+
+  <section class="panel" aria-label="Afwatering uitwerken">
+    <h2>Zo werkt u de afwatering uit</h2>
+    <dl>
+      <dt>Gootstuk</dt><dd>Een metalen goot boven de opstand, breder dan het raam. De platen eindigen erin met hun voorflap.</dd>
+      <dt>Afschot</dt><dd>Van het midden naar beide kanten. De dakdekker bepaalt het afschot en de afmeting van de goot.</dd>
+      <dt>Ribben</dt><dd>De goot loopt over de naden. Werk de naden onder de goot waterdicht af, anders loopt het water erlangs.</dd>
+      <dt>Zijkanten</dt><dd>De platen naast het raam lopen door. Het kader past bij een veelvoud van 500 mm, of vraag Joris Ide om afwerkingsstukken of platen op maat (brochure MR036).</dd>
+      <dt>Overloop</dt><dd>Maak de gootrand lager dan de opstand. Bij een overvloed loopt het water naar buiten, niet naar het raam.</dd>
+      <dt>Afmeting</dt><dd>De breedte van het kader volgt uit het glaspakket van Pauwels. Vraag hun de buitenmaat voor u de plaatverdeling vastlegt.</dd>
+    </dl>
+  </section>
+
   <section class="panel" aria-label="OSB of spaanplaat">
     <h2>OSB of spaanplaat</h2>
     <dl>
@@ -586,5 +637,12 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
   $("next3").addEventListener("click", function () { stop(); go(step + 1); });
   $("prev3").addEventListener("click", function () { stop(); go(step - 1); });
   go(N);
+})();
+(function () {
+  var svg = document.getElementById("svgE"), btn = document.getElementById("water");
+  btn.addEventListener("click", function () {
+    var on = svg.classList.toggle("run");
+    btn.textContent = on ? "Stop het water" : "Laat het water lopen";
+  });
 })();
 </script>

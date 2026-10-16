@@ -1,0 +1,343 @@
+<title>JI Vieo Edge 2.0 500 Opbouw</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: werktekening-stijl. Kop, stapkaart, twee doorsneden (dwars en lengte), daarna gegevens uit het datasheet. */
+:root {
+  --bg: #eef1f0;
+  --card: #ffffff;
+  --sheet: #f7f9f8;
+  --ink: #13232a;
+  --mute: #55666d;
+  --line: #c3cdd0;
+  --accent: #0b6b63;
+  --accent-ink: #ffffff;
+  --hot: #d2571a;
+  --wood: #c19a62;
+  --board: #dcc79d;
+  --spar: #a67c45;
+  --folie: #2f8fc8;
+  --panel: #293133;
+  --panel-edge: #8fa0a6;
+  --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "Barlow", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1618; --card: #162023; --sheet: #101a1d; --ink: #e4ecee; --mute: #94a6ac; --line: #2c3b40;
+    --accent: #3fc1b3; --accent-ink: #05211e; --hot: #ff8a3d; --wood: #9c7a4a; --board: #8c7a58; --spar: #7a5c33;
+    --folie: #4aa9de; --panel-edge: #9fb0b6; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1618; --card: #162023; --sheet: #101a1d; --ink: #e4ecee; --mute: #94a6ac; --line: #2c3b40;
+  --accent: #3fc1b3; --accent-ink: #05211e; --hot: #ff8a3d; --wood: #9c7a4a; --board: #8c7a58; --spar: #7a5c33;
+  --folie: #4aa9de; --panel-edge: #9fb0b6; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.5;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(34px, 6vw, 56px); line-height: 1; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { margin: 4px 0 0; max-width: 62ch; color: var(--mute); }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 24px; margin: 0; letter-spacing: .02em; }
+
+.stepcard { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; }
+.stephead { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; }
+.stepnum { font-family: var(--f-display); font-weight: 700; font-size: 54px; line-height: .9; color: var(--accent); min-width: 1.1ch; }
+.steptitle { font-family: var(--f-display); font-weight: 600; font-size: 26px; line-height: 1.1; margin: 0 0 4px; }
+.steptext { margin: 0; max-width: 68ch; min-height: 3.2em; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 8px 14px; cursor: pointer; min-height: 40px; }
+button:hover { border-color: var(--accent); }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.chip { font-family: var(--f-mono); width: 40px; padding: 0; text-align: center; }
+.chip[aria-current="step"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.opts { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.opt { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--mute); flex-wrap: wrap; }
+.sw { width: 40px; height: 40px; padding: 0; border-radius: 50%; border: 2px solid var(--line); }
+.sw[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent); }
+.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s; }
+
+figure { margin: 0; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 8px; }
+figcaption { font-size: 14px; color: var(--mute); max-width: 80ch; }
+figcaption b { color: var(--ink); font-family: var(--f-display); font-size: 18px; letter-spacing: .03em; font-weight: 600; }
+.scroll { overflow-x: auto; }
+svg { display: block; width: 100%; min-width: 560px; height: auto; color: var(--ink); }
+svg text { font-family: var(--f-mono); font-size: 12px; fill: currentColor; }
+svg .lbl { fill: var(--mute); }
+svg .dim { stroke: currentColor; stroke-width: 1; fill: none; }
+svg .hl { fill: none; stroke: var(--hot); stroke-width: 2; stroke-dasharray: 5 4; }
+svg .hlt { fill: var(--hot); }
+
+.it { opacity: 0; transition: opacity .6s ease, transform .9s cubic-bezier(.2,.8,.2,1); }
+.it.on { opacity: 1; }
+.d1 { transform: translateY(-70px); }
+.d2 { transform: translate(60px, -70px); }
+.d3 { transform: translate(60px, -70px); }
+.d1.on, .d2.on, .d3.on { transform: none; }
+.slide { transform: translateX(120px); }
+.slide.on { transform: none; }
+.flap { transform-origin: 0 0; transform: rotate(-35deg); transition: opacity .5s, transform 1.4s cubic-bezier(.5,0,.2,1); }
+.flap.fold { transform: rotate(-150deg); }
+.pan { fill: none; stroke: var(--panel); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.pan-edge { fill: none; stroke: var(--panel-edge); stroke-width: 5.5; stroke-linejoin: round; stroke-linecap: round; opacity: .55; }
+svg[data-mode="latten"] .only-spaan { display: none; }
+svg[data-mode="spaan"] .only-latten { display: none; }
+@media (prefers-reduced-motion: reduce) { .it, .flap, .bar i { transition: none; } }
+
+.data { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 15px; }
+dt { color: var(--mute); }
+dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+.note { font-size: 14px; color: var(--mute); margin: 0; }
+.note b { color: var(--ink); }
+@media (max-width: 760px) { .data { grid-template-columns: 1fr; } .chips { margin-left: 0; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Joris Ide · artikel 19096 · staande naad</div>
+    <h1>JI Vieo Edge <span>2.0 500</span></h1>
+    <p class="lede">Zo bouwt u het dak op, van drager tot afgewerkte onderrand. Speel de animatie af of loop de zeven stappen zelf door. De tekeningen zijn schematisch.</p>
+  </header>
+
+  <section class="stepcard" aria-label="Plaatsingsstappen">
+    <div class="stephead">
+      <div class="stepnum" id="num" aria-hidden="true">7</div>
+      <div>
+        <h2 class="steptitle" id="ttl"></h2>
+        <p class="steptext" id="txt" aria-live="polite"></p>
+      </div>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="controls">
+      <button class="primary" id="play" type="button">Speel opbouw af</button>
+      <button id="prev" type="button">Vorige</button>
+      <button id="next" type="button">Volgende</button>
+      <div class="chips" id="chips" role="group" aria-label="Ga naar stap"></div>
+    </div>
+    <div class="opts">
+      <div class="opt">Drager
+        <div class="seg" role="group" aria-label="Soort drager">
+          <button id="m-spaan" type="button" aria-pressed="true">Spaanplaat</button>
+          <button id="m-latten" type="button" aria-pressed="false">Dennenhouten latten</button>
+        </div>
+      </div>
+      <div class="opt">Kleur
+        <button class="sw" type="button" data-c="#293133" data-e="#8fa0a6" aria-label="RAL 7016 mat" title="RAL 7016 mat" style="background:#293133" aria-pressed="true"></button>
+        <button class="sw" type="button" data-c="#0e0e10" data-e="#8fa0a6" aria-label="RAL 9005 mat" title="RAL 9005 mat" style="background:#0e0e10" aria-pressed="false"></button>
+        <button class="sw" type="button" data-c="#8f8f8c" data-e="#cfd8db" aria-label="RAL 9007 mat" title="RAL 9007 mat" style="background:#8f8f8c" aria-pressed="false"></button>
+      </div>
+    </div>
+  </section>
+
+  <figure>
+    <div class="scroll">
+    <svg id="svgA" data-mode="spaan" viewBox="0 0 900 330" role="img" aria-label="Dwarsdoorsnede: drie platen met staande naad naast elkaar op een houten drager, elke plaat 500 mm dekkend en 23 mm hoog">
+      <defs><marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+      <text x="40" y="40" class="lbl">DWARSDOORSNEDE · dwars op de plaatrichting</text>
+
+      <g class="it on" data-s="1">
+        <rect x="40" y="232" width="840" height="34" fill="var(--board)" class="only-spaan"/>
+        <rect x="40" y="232" width="840" height="34" fill="var(--wood)" class="only-latten"/>
+        <path d="M40,232 H880 M40,266 H880" stroke="currentColor" stroke-width="1"/>
+        <text x="50" y="254" class="only-spaan">spaanplaatpaneel</text>
+        <text x="50" y="254" class="only-latten">dennenhouten lat</text>
+      </g>
+      <g class="it on only-spaan" data-s="2">
+        <path d="M40,231 H880" stroke="var(--folie)" stroke-width="2.5"/>
+        <text x="880" y="224" text-anchor="end" style="fill:var(--folie)">wandfolie (verplicht)</text>
+      </g>
+
+      <g transform="translate(60,0)"><g class="it d1 on" data-s="3">
+        <path class="pan-edge" d="M4,192 L0,192 L0,230 L260,230 L260,188 L275,188 L275,203"/>
+        <path class="pan" d="M4,192 L0,192 L0,230 L260,230 L260,188 L275,188 L275,203"/>
+      </g></g>
+      <g transform="translate(330,0)"><g class="it d2 on" data-s="4">
+        <path class="pan-edge" d="M4,192 L0,192 L0,230 L260,230 L260,188 L275,188 L275,203"/>
+        <path class="pan" d="M4,192 L0,192 L0,230 L260,230 L260,188 L275,188 L275,203"/>
+      </g></g>
+      <g transform="translate(600,0)"><g class="it d3 on" data-s="5">
+        <path class="pan-edge" d="M4,192 L0,192 L0,230 L260,230 L260,188 L275,188 L275,203"/>
+        <path class="pan" d="M4,192 L0,192 L0,230 L260,230 L260,188 L275,188 L275,203"/>
+      </g></g>
+
+      <g class="it on" data-s="4">
+        <circle class="hl" cx="333" cy="196" r="20"/>
+        <text class="hlt" x="333" y="150" text-anchor="middle">kliksluiting (overlap)</text>
+        <path d="M333,156 V174" stroke="var(--hot)" stroke-width="1.5" fill="none"/>
+      </g>
+      <g class="it on" data-s="3">
+        <text x="60" y="120">JI Vieo Edge 2.0 500</text>
+        <text x="60" y="137" class="lbl">staal S280 GD · 0,75 mm</text>
+      </g>
+
+      <g class="dim">
+        <path d="M30,190 V230" marker-start="url(#ar)" marker-end="url(#ar)"/>
+        <path d="M335,290 H605" marker-start="url(#ar)" marker-end="url(#ar)"/>
+        <path d="M335,270 V296 M605,270 V296" stroke-width=".8"/>
+      </g>
+      <text x="22" y="214" text-anchor="end">23</text>
+      <text x="470" y="312" text-anchor="middle">500 mm dekkend</text>
+    </svg>
+    </div>
+    <figcaption><b>Dwarsdoorsnede.</b> Elke plaat dekt 500 mm en staat 23 mm hoog. De platen klikken in elkaar. De hoogte is ongeveer drie keer vergroot, zodat de naad leesbaar blijft.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="scroll">
+    <svg id="svgB" data-mode="spaan" viewBox="0 0 900 300" role="img" aria-label="Lengtedoorsnede: één plaat op de drager langs de helling, met de voorflap onderaan die eerst op ongeveer 35 graden staat en daarna op de werf wordt dichtgeplooid">
+      <text x="40" y="32" class="lbl">LENGTEDOORSNEDE · langs de helling</text>
+      <g transform="rotate(-8 450 210) translate(0,10)">
+        <g class="it on" data-s="1">
+          <rect x="140" y="205" width="700" height="30" fill="var(--spar)"/>
+          <rect x="120" y="191" width="720" height="14" fill="var(--board)" class="only-spaan"/>
+          <g class="only-latten" fill="var(--wood)">
+            <rect x="150" y="191" width="30" height="14"/><rect x="250" y="191" width="30" height="14"/><rect x="350" y="191" width="30" height="14"/>
+            <rect x="450" y="191" width="30" height="14"/><rect x="550" y="191" width="30" height="14"/><rect x="650" y="191" width="30" height="14"/><rect x="750" y="191" width="30" height="14"/>
+          </g>
+          <path d="M140,205 V235 M140,235 H840 M140,205 H840" stroke="currentColor" fill="none" stroke-width="1"/>
+          <text x="150" y="225">dakspar of gording</text>
+          <text x="470" y="254" class="lbl only-spaan">spaanplaat</text>
+          <text x="470" y="254" class="lbl only-latten">dennenhouten latten</text>
+        </g>
+        <g class="it on only-spaan" data-s="2">
+          <path d="M120,190 H840" stroke="var(--folie)" stroke-width="2.5"/>
+          <text x="600" y="206" style="fill:var(--folie)">wandfolie</text>
+        </g>
+        <g class="it slide on" data-s="3">
+          <path class="pan-edge" d="M100,186 H840"/>
+          <path class="pan" d="M100,186 H840"/>
+          <text x="470" y="170">plaat 1000 tot 8000 mm</text>
+        </g>
+        <g transform="translate(100 186)">
+          <g class="it flap on fold" id="flap">
+            <path class="pan-edge" d="M0,0 H40"/>
+            <path class="pan" d="M0,0 H40"/>
+          </g>
+        </g>
+        <g class="it on" data-s="6">
+          <text class="hlt" x="14" y="262">voorflap, machinaal ca. 35°</text>
+        </g>
+        <g class="it on" data-s="7" id="fold-lbl">
+          <circle class="hl" cx="122" cy="196" r="22"/>
+          <text class="hlt" x="14" y="282">plooien op werf (detail A)</text>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <figcaption><b>Lengtedoorsnede.</b> De voorflap is in de fabriek gebogen. De sluitflap plooit u op de werf dicht. De helling en de lengte van de overstek volgen uit het ontwerp van het dak.</figcaption>
+  </figure>
+
+  <div class="data">
+    <section class="panel" aria-label="Gegevens">
+      <h2>Gegevens uit het datasheet</h2>
+      <dl>
+        <dt>Artikel</dt><dd>19096</dd>
+        <dt>Dikte</dt><dd>0,75 mm</dd>
+        <dt>Gewicht</dt><dd>7,18 kg/m²</dd>
+        <dt>Breedte</dt><dd>500 mm dekkend, 528 mm totaal</dd>
+        <dt>Hoogte</dt><dd>23 mm</dd>
+        <dt>Lengte</dt><dd>1000 tot 8000 mm</dd>
+        <dt>Staal</dt><dd>S280 GD</dd>
+        <dt>Coating</dt><dd>Grandem 40 µ</dd>
+        <dt>Kleuren</dt><dd>RAL 7016, 9005, 9007 (mat)</dd>
+        <dt>Toepassing</dt><dd>daken en gevels</dd>
+      </dl>
+    </section>
+    <section class="panel" aria-label="Let op">
+      <h2>Let op</h2>
+      <p class="note"><b>Bron:</b> datasheet van Joris Ide (versie 03 sep 2026) en tekening Roof, revisie C van 22.04.2025.</p>
+      <p class="note"><b>Niet in de bijlagen:</b> bevestigingsmiddelen, afstanden tussen latten en de opbouw onder de drager. Vraag de montagehandleiding bij Joris Ide aan voor die gegevens.</p>
+      <p class="note">Afwerkingsstukken zijn op aanvraag beschikbaar, zie brochure MR036 Accessoires.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  var STEPS = [
+    ["Drager klaarzetten", "Het profiel gaat op een houten drager: dennenhouten latten of spaanplaatpanelen. Kies hierboven welke u bekijkt."],
+    ["Wandfolie leggen", null],
+    ["Eerste plaat leggen", "Leg de eerste plaat langs de helling op de drager. Elke plaat is 500 mm dekkend, 23 mm hoog en 0,75 mm dik, in staal S280 GD met Grandem-coating."],
+    ["Tweede plaat inklikken", "De volgende plaat klikt in de naad van de eerste (overlap). Het kliksysteem maakt de plaatsing een stuk eenvoudiger."],
+    ["Rij aanvullen", "Herhaal het inklikken tot het dakvlak gedekt is. Elke plaat voegt 500 mm breedte toe."],
+    ["Voorflap onderaan", "Aan de onderrand is de plaat in de fabriek machinaal gebogen tot ongeveer 35 graden."],
+    ["Sluitflap dichtplooien", "De flap plooit u op de werf dicht (detail A op de tekening, \"te plooien op werf\"). Afwerkingsstukken zijn op aanvraag verkrijgbaar."]
+  ];
+  var N = STEPS.length, step = N, mode = "spaan", timer = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var svgs = [$("svgA"), $("svgB")];
+  var chips = $("chips");
+  for (var i = 1; i <= N; i++) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = i; b.setAttribute("aria-label", "Stap " + i + ": " + STEPS[i - 1][0]);
+    (function (n) { b.addEventListener("click", function () { stop(); go(n); }); })(i);
+    chips.appendChild(b);
+  }
+  function text(n) {
+    if (n === 2) return mode === "spaan"
+      ? "Bij spaanplaatpanelen is wandfolie verplicht. Leg de folie eerst op de drager, daarna pas de platen."
+      : "Bij dennenhouten latten noemt het datasheet geen folie. Volg hiervoor het ontwerp van de dakopbouw.";
+    return STEPS[n - 1][1];
+  }
+  function go(n) {
+    step = Math.max(0, Math.min(N, n));
+    var shown = Math.max(1, step);
+    document.querySelectorAll("[data-s]").forEach(function (el) { el.classList.toggle("on", step >= +el.dataset.s); });
+    var f = $("flap");
+    f.classList.toggle("on", step >= 6);
+    f.classList.toggle("fold", step >= 7);
+    $("num").textContent = step === 0 ? "0" : step;
+    $("ttl").textContent = step === 0 ? "Leeg dakvlak" : STEPS[shown - 1][0];
+    $("txt").textContent = step === 0 ? "Druk op Volgende of speel de opbouw af." : text(shown);
+    $("bar").style.width = (step / N * 100) + "%";
+    chips.querySelectorAll("button").forEach(function (c, k) { if (k + 1 === step) c.setAttribute("aria-current", "step"); else c.removeAttribute("aria-current"); });
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } $("play").textContent = "Speel opbouw af"; }
+  function play() {
+    if (timer) { stop(); return; }
+    go(0); $("play").textContent = "Pauzeer";
+    timer = setInterval(function () {
+      if (step >= N) { stop(); return; }
+      go(step + 1);
+    }, 2200);
+  }
+  $("play").addEventListener("click", play);
+  $("next").addEventListener("click", function () { stop(); go(step + 1); });
+  $("prev").addEventListener("click", function () { stop(); go(step - 1); });
+  function setMode(m) {
+    mode = m;
+    svgs.forEach(function (s) { s.setAttribute("data-mode", m); });
+    $("m-spaan").setAttribute("aria-pressed", m === "spaan");
+    $("m-latten").setAttribute("aria-pressed", m === "latten");
+    go(step);
+  }
+  $("m-spaan").addEventListener("click", function () { setMode("spaan"); });
+  $("m-latten").addEventListener("click", function () { setMode("latten"); });
+  document.querySelectorAll(".sw").forEach(function (sw) {
+    sw.addEventListener("click", function () {
+      document.querySelectorAll(".sw").forEach(function (o) { o.setAttribute("aria-pressed", o === sw); });
+      document.documentElement.style.setProperty("--panel", sw.dataset.c);
+      document.documentElement.style.setProperty("--panel-edge", sw.dataset.e);
+    });
+  });
+  go(N);
+})();
+</script>

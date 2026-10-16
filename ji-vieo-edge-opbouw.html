@@ -19,6 +19,11 @@
   --folie: #2f8fc8;
   --panel: #293133;
   --panel-edge: #8fa0a6;
+  --under: #7b57c7;
+  --damp: #d9602b;
+  --insul: #e4cf63;
+  --gips: #d4d4cf;
+  --osb: #c99a55;
   --f-display: "Barlow Condensed", "Arial Narrow", sans-serif;
   --f-body: "Barlow", system-ui, sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -27,13 +32,13 @@
   :root:not([data-theme="light"]) {
     --bg: #0f1618; --card: #162023; --sheet: #101a1d; --ink: #e4ecee; --mute: #94a6ac; --line: #2c3b40;
     --accent: #3fc1b3; --accent-ink: #05211e; --hot: #ff8a3d; --wood: #9c7a4a; --board: #8c7a58; --spar: #7a5c33;
-    --folie: #4aa9de; --panel-edge: #9fb0b6; color-scheme: dark;
+    --folie: #4aa9de; --panel-edge: #9fb0b6; --under: #a483ee; --damp: #ff8a52; --insul: #8a7a2e; --gips: #596164; --osb: #8d6a38; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0f1618; --card: #162023; --sheet: #101a1d; --ink: #e4ecee; --mute: #94a6ac; --line: #2c3b40;
   --accent: #3fc1b3; --accent-ink: #05211e; --hot: #ff8a3d; --wood: #9c7a4a; --board: #8c7a58; --spar: #7a5c33;
-  --folie: #4aa9de; --panel-edge: #9fb0b6; color-scheme: dark;
+  --folie: #4aa9de; --panel-edge: #9fb0b6; --under: #a483ee; --damp: #ff8a52; --insul: #8a7a2e; --gips: #596164; --osb: #8d6a38; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body {
@@ -98,6 +103,9 @@ svg .hlt { fill: var(--hot); }
 .pan-edge { fill: none; stroke: var(--panel-edge); stroke-width: 5.5; stroke-linejoin: round; stroke-linecap: round; opacity: .55; }
 svg[data-mode="latten"] .only-spaan { display: none; }
 svg[data-mode="spaan"] .only-latten { display: none; }
+.drop { transform: translateY(-34px); }
+.drop.on { transform: none; }
+svg .ldr { stroke: currentColor; stroke-width: .8; fill: none; opacity: .6; }
 @media (prefers-reduced-motion: reduce) { .it, .flap, .bar i { transition: none; } }
 
 .data { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; }
@@ -114,7 +122,7 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
   <header>
     <div class="eyebrow">Joris Ide · artikel 19096 · staande naad</div>
     <h1>JI Vieo Edge <span>2.0 500</span></h1>
-    <p class="lede">Zo bouwt u het dak op, van drager tot afgewerkte onderrand. Speel de animatie af of loop de zeven stappen zelf door. De tekeningen zijn schematisch.</p>
+    <p class="lede">Zo plaatst u de platen, van drager tot afgewerkte onderrand. Daaronder staat de volledige dakopbouw met onderdak, isolatie, OSB en dampscherm. De tekeningen zijn schematisch.</p>
   </header>
 
   <section class="stepcard" aria-label="Plaatsingsstappen">
@@ -245,6 +253,90 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
     <figcaption><b>Lengtedoorsnede.</b> De voorflap is in de fabriek gebogen. De sluitflap plooit u op de werf dicht. De helling en de lengte van de overstek volgen uit het ontwerp van het dak.</figcaption>
   </figure>
 
+  <section class="stepcard" aria-label="Volledige dakopbouw">
+    <div class="stephead">
+      <div class="stepnum" id="num2" aria-hidden="true">9</div>
+      <div>
+        <div class="eyebrow">Volledige dakopbouw · indicatief</div>
+        <h2 class="steptitle" id="ttl2"></h2>
+        <p class="steptext" id="txt2" aria-live="polite"></p>
+      </div>
+    </div>
+    <div class="bar"><i id="bar2"></i></div>
+    <div class="controls">
+      <button class="primary" id="play2" type="button">Speel dakopbouw af</button>
+      <button id="prev2" type="button">Vorige</button>
+      <button id="next2" type="button">Volgende</button>
+      <div class="chips" id="chips2" role="group" aria-label="Ga naar laag"></div>
+    </div>
+  </section>
+
+  <figure>
+    <div class="scroll">
+    <svg id="svgC" viewBox="0 0 900 390" role="img" aria-label="Doorsnede van het volledige dak, van buiten naar binnen: staande-naadplaten, wandfolie, OSB of spaanplaat, tengels met ventilatiespouw, onderdak, spanten met isolatie, dampscherm, technische latten en gipsplaat">
+      <defs>
+        <clipPath id="clipC"><rect x="60" y="0" width="690" height="350"/></clipPath>
+        <pattern id="insP" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M0,14 L7,0 L14,14" fill="none" stroke="currentColor" stroke-width="1" opacity=".4"/></pattern>
+      </defs>
+      <text x="60" y="24" class="lbl">BUITEN</text>
+      <text x="60" y="372" class="lbl">BINNEN</text>
+
+      <g class="it drop on" data-t="7">
+        <rect x="60" y="158" width="690" height="118" fill="var(--insul)"/>
+        <rect x="60" y="158" width="690" height="118" fill="url(#insP)"/>
+        <path class="ldr" d="M700,216 L764,216"/><text x="770" y="220">isolatie</text>
+        <text x="250" y="222" style="fill:currentColor">isolatie tussen de spanten</text>
+      </g>
+      <g class="it drop on" data-t="1">
+        <g fill="var(--spar)" stroke="currentColor" stroke-width="1">
+          <rect x="130" y="156" width="40" height="120"/><rect x="370" y="156" width="40" height="120"/><rect x="610" y="156" width="40" height="120"/>
+        </g>
+        <path class="ldr" d="M650,246 L764,246"/><text x="770" y="250">spanten</text>
+      </g>
+      <g class="it drop on" data-t="2">
+        <path d="M60,156 H750" stroke="var(--under)" stroke-width="3"/>
+        <path class="ldr" d="M750,156 L764,166"/><text x="770" y="170">onderdak</text>
+      </g>
+      <g class="it drop on" data-t="3">
+        <g fill="var(--wood)" stroke="currentColor" stroke-width="1">
+          <rect x="130" y="122" width="40" height="34"/><rect x="370" y="122" width="40" height="34"/><rect x="610" y="122" width="40" height="34"/>
+        </g>
+        <text x="260" y="143" class="lbl" text-anchor="middle">ventilatiespouw</text>
+        <path class="ldr" d="M650,139 L764,138"/><text x="770" y="142">tengels</text>
+      </g>
+      <g class="it drop on" data-t="4">
+        <rect x="60" y="94" width="690" height="28" fill="var(--osb)" stroke="currentColor" stroke-width="1"/>
+        <path class="ldr" d="M740,108 L764,120"/><text x="770" y="124">OSB / spaanplaat</text>
+      </g>
+      <g class="it drop on" data-t="5">
+        <path d="M60,92.5 H750" stroke="var(--folie)" stroke-width="2.5"/>
+        <path class="ldr" d="M750,92.5 L764,98"/><text x="770" y="102" style="fill:var(--folie)">wandfolie</text>
+      </g>
+      <g clip-path="url(#clipC)"><g class="it drop on" data-t="6">
+        <g transform="translate(60,0)"><path class="pan-edge" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/><path class="pan" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/></g>
+        <g transform="translate(330,0)"><path class="pan-edge" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/><path class="pan" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/></g>
+        <g transform="translate(600,0)"><path class="pan-edge" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/><path class="pan" d="M4,52 L0,52 L0,90 L260,90 L260,48 L275,48 L275,63"/></g>
+      </g></g>
+      <g class="it drop on" data-t="6">
+        <path class="ldr" d="M740,90 L764,74"/><text x="770" y="78">staande-naadplaat</text>
+      </g>
+      <g class="it drop on" data-t="8">
+        <path d="M60,278 H750" stroke="var(--damp)" stroke-width="2.5"/>
+        <path class="ldr" d="M750,278 L764,286"/><text x="770" y="290" style="fill:var(--damp)">dampscherm</text>
+      </g>
+      <g class="it drop on" data-t="9">
+        <g fill="var(--wood)" stroke="currentColor" stroke-width="1">
+          <rect x="130" y="280" width="40" height="32"/><rect x="370" y="280" width="40" height="32"/><rect x="610" y="280" width="40" height="32"/>
+        </g>
+        <rect x="60" y="312" width="690" height="20" fill="var(--gips)" stroke="currentColor" stroke-width="1"/>
+        <path class="ldr" d="M650,296 L764,306"/><text x="770" y="310">technische latten</text>
+        <path class="ldr" d="M750,322 L764,330"/><text x="770" y="334">gipsplaat</text>
+      </g>
+    </svg>
+    </div>
+    <figcaption><b>Volledige dakopbouw.</b> Doorsnede dwars op de helling, van buiten naar binnen. De lagen volgen de volgorde waarin ze op de bouwplaats komen. Diktes en afstanden zijn niet op schaal en volgen uit het ontwerp.</figcaption>
+  </figure>
+
   <div class="data">
     <section class="panel" aria-label="Gegevens">
       <h2>Gegevens uit het datasheet</h2>
@@ -265,6 +357,7 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
       <h2>Let op</h2>
       <p class="note"><b>Bron:</b> datasheet van Joris Ide (versie 03 sep 2026) en tekening Roof, revisie C van 22.04.2025.</p>
       <p class="note"><b>Niet in de bijlagen:</b> bevestigingsmiddelen, afstanden tussen latten en de opbouw onder de drager. Vraag de montagehandleiding bij Joris Ide aan voor die gegevens.</p>
+      <p class="note"><b>Dakopbouw:</b> de lagen onder de drager zijn een gebruikelijke opbouw met geventileerde spouw, geen voorschrift van Joris Ide. Dikte van de isolatie, type onderdak en dampscherm, ventilatie bij dakrand en nok en het gebruik van OSB bepaalt het ontwerp. Het datasheet noemt spaanplaat en latten, niet OSB.</p>
       <p class="note">Afwerkingsstukken zijn op aanvraag beschikbaar, zie brochure MR036 Accessoires.</p>
     </section>
   </div>
@@ -338,6 +431,47 @@ dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap:
       document.documentElement.style.setProperty("--panel-edge", sw.dataset.e);
     });
   });
+  go(N);
+})();
+(function () {
+  var L = [
+    ["Spanten", "De draagstructuur van het dak. Afstand en afmeting volgen uit de stabiliteitsstudie."],
+    ["Onderdak", "Een damp-open onderdak over de spanten is de tweede waterkering. Het type volgt uit het ontwerp."],
+    ["Tengels en spouw", "Tengels langs de helling boven de spanten maken een geventileerde spouw onder de dakdrager. De lucht moet bij de dakrand binnen en bij de nok buiten kunnen."],
+    ["OSB of spaanplaat", "De dakdrager voor het profiel. Het datasheet noemt dennenhouten latten of spaanplaatpanelen. Vraag Joris Ide of OSB is toegelaten."],
+    ["Wandfolie", "Verplicht bij spaanplaatpanelen volgens het datasheet. Ze ligt tussen de drager en de staande-naadplaten."],
+    ["JI Vieo Edge 2.0 500", "De platen klikken in elkaar en dekken 500 mm per stuk. Het dak is nu dicht."],
+    ["Isolatie tussen de spanten", "Aan de binnenzijde komt de isolatie tussen de spanten. De dikte volgt uit de energie-eisen."],
+    ["Dampscherm", "Het dampscherm ligt aan de warme zijde van de isolatie, onder de spanten. Naden en aansluitingen sluit u luchtdicht af."],
+    ["Technische latten en gipsplaat", "Latten onder het dampscherm laten ruimte voor leidingen. Daarover komen de gipsplaten als binnenafwerking."]
+  ];
+  var N = L.length, step = N, timer = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var chips = $("chips2");
+  for (var i = 1; i <= N; i++) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = i; b.setAttribute("aria-label", "Laag " + i + ": " + L[i - 1][0]);
+    (function (n) { b.addEventListener("click", function () { stop(); go(n); }); })(i);
+    chips.appendChild(b);
+  }
+  function go(n) {
+    step = Math.max(0, Math.min(N, n));
+    var shown = Math.max(1, step);
+    document.querySelectorAll("#svgC [data-t]").forEach(function (el) { el.classList.toggle("on", step >= +el.dataset.t); });
+    $("num2").textContent = step;
+    $("ttl2").textContent = step === 0 ? "Leeg dak" : L[shown - 1][0];
+    $("txt2").textContent = step === 0 ? "Druk op Volgende of speel de dakopbouw af." : L[shown - 1][1];
+    $("bar2").style.width = (step / N * 100) + "%";
+    chips.querySelectorAll("button").forEach(function (c, k) { if (k + 1 === step) c.setAttribute("aria-current", "step"); else c.removeAttribute("aria-current"); });
+  }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } $("play2").textContent = "Speel dakopbouw af"; }
+  $("play2").addEventListener("click", function () {
+    if (timer) { stop(); return; }
+    go(0); $("play2").textContent = "Pauzeer";
+    timer = setInterval(function () { if (step >= N) { stop(); return; } go(step + 1); }, 2200);
+  });
+  $("next2").addEventListener("click", function () { stop(); go(step + 1); });
+  $("prev2").addEventListener("click", function () { stop(); go(step - 1); });
   go(N);
 })();
 </script>
